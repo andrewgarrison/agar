@@ -46,7 +46,9 @@ Rule of thumb: when deciding *what* happens, ask UI SDK. When deciding *how it l
 
 ### The jelly engine (framework-agnostic, no React)
 
-- **`body.ts`: physics, with no DOM.** A `JellyBody` works like this:
+It lives in `packages/core/src` (extracted from the spike in Phase 1, Nov 2026, matching the spike's physics to float rounding).
+
+- **`body.ts`: physics, with no DOM.** A `JellyBody` works like this (the parts are in `edges.ts`, `surface-ring.ts`, `goal-shape.ts`, `shape.ts` and `spring.ts`):
   - Four edge springs (left, right, top, bottom) chase a target rectangle. On a sideways move the leading edge snaps first and the trailing edge follows a beat later.
   - A ring of 56 surface particles sits around those edges. Each has its own wobbly spring, partial inertia, area-preserving pressure, a slosh force, and smoothing between neighbours.
   - Volume is conserved: the body gets thinner when stretched and fatter when squashed.
@@ -55,17 +57,18 @@ Rule of thumb: when deciding *what* happens, ask UI SDK. When deciding *how it l
   - The goal shape is a rounded rectangle (`radius` option). Leaving `radius` out gives a pill.
   - API: `place`, `pressToward`, `pressInPlace`, `release`, `moveTo`, `morphTo`, `fadeTo`, `setBounds`, `setPointer`, `isAsleep`.
   - Every body has its own `params`, so they can be tuned live.
-- **`renderer.ts`: one WebGL2 context for the whole page.**
+- **`renderer.ts`: one WebGL2 context for the whole page** (`gl-renderer.ts`, `canvas-renderer.ts`, `shader.ts`).
   - Browsers only allow about 16 live WebGL contexts per page, so components must never create their own.
   - Each component owns a plain 2D canvas, called its **surface**, that sits behind its content. The shared renderer draws that surface's bodies into one offscreen WebGL2 canvas, then copies the pixels across with `drawImage` in the same task. That means there's no need for `preserveDrawingBuffer`.
   - The fragment shader draws the ring as a signed distance field, rounded by `ROUND` (10px). It uses a bevelled normal for the specular highlight, rim, inner glow and stroke, adds a drop shadow, and outputs premultiplied alpha.
   - There's a Canvas 2D fallback, and it recreates the context if the context is lost.
-- **`stage.ts`: one animation loop for every surface.**
+- **`stage.ts`: one animation loop for every surface** (`loop.ts`).
+  - Importing it has no side effects: the loop and its `visibilitychange` listener start with the first surface, so it's safe during SSR.
   - Steps every awake body and draws every awake surface.
   - Skips surfaces that are off screen (IntersectionObserver).
   - Stops entirely when the tab is hidden or everything is asleep.
   - A body with `breathe: 0` sleeps once it settles. Idle breathing keeps a body awake, so use it sparingly.
-- **`palette.ts`:** jelly palettes for light and dark (`JELLY_PALETTES` is the glassy dark tint, `MILK_PALETTES` the solid thumbs, `GLASS_PALETTES` the panels). These should become tokens.
+- **`palettes.ts`: jelly palettes, as tokens.** `JELLY_PALETTES[material][theme]`, where the material is `tint` (the dock's glassy dark tint), `milk` (solid switch thumbs) or `glass` (panels), and the theme is `light` or `dark`. Colours are `{ red, green, blue, alpha }`, 0 to 1. The rest of the token set (colour, spacing, type, radius, motion) is still to come.
 
 ### Binding patterns proven in the spike
 
@@ -155,10 +158,7 @@ The spike from agarrison.dev's `jelly-design-spike` branch (closed PR #9 there).
 
 | File | State | Notes |
 |---|---|---|
-| `body.ts` | Keep | Core physics. Belongs in `@agar/core`. |
-| `renderer.ts` | Keep | Core. Belongs in `@agar/core`. |
-| `stage.ts` | Keep | Core. Belongs in `@agar/core`. |
-| `palette.ts` | Rework | Turn into tokens. |
+| `body.ts`, `renderer.ts`, `stage.ts`, `palette.ts` | Done | Moved into `@agar/core` (Phase 1). The `.tsx` files below still import them by their old paths; read those imports as `@agar/core`. |
 | `useJelly.ts` | Rework | Imports the site's `useTheme` from `@/context/ThemeContext`. Replace it with an Agar theme provider, a `theme` prop, or `prefers-color-scheme` plus a `data-theme` attribute. |
 | `JellySwitch.tsx` | Spike quality | The behaviour is right. The API needs designing. |
 | `JellyTabs.tsx` | Spike quality | Takes a `tabs` array. A real API should be composable parts like UI SDK's. |

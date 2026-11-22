@@ -1,5 +1,23 @@
 [
-  { "name": "@agar/core", "path": "packages/core/dist/index.js", "import": "*", "limit": "1 kB" },
+  { "name": "@agar/core", "path": "packages/core/dist/index.js", "import": "*", "limit": "7.6 kB" },
+  {
+    "name": "@agar/core: JellyBody",
+    "path": "packages/core/dist/index.js",
+    "import": "{ JellyBody }",
+    "limit": "3.6 kB"
+  },
+  {
+    "name": "@agar/core: JellySurface",
+    "path": "packages/core/dist/index.js",
+    "import": "{ JellySurface }",
+    "limit": "4 kB"
+  },
+  {
+    "name": "@agar/core: JELLY_PALETTES",
+    "path": "packages/core/dist/index.js",
+    "import": "{ JELLY_PALETTES }",
+    "limit": "0.6 kB"
+  },
   {
     "name": "@agar/react/visually-hidden",
     "path": "packages/react/dist/visually-hidden/index.js",
