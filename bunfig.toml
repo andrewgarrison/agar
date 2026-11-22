@@ -1,3 +1,16 @@
 [install]
 # Pin exact versions on `bun add`, as .npmrc's save-exact did under pnpm.
 exact = true
+
+[fmt]
+# Same style the code already uses (Biome's settings before), so the switch
+# reformats as little as possible.
+printWidth = 120
+singleQuote = true
+jsxSingleQuote = false
+semi = true
+trailingComma = "all"
+arrowParens = "always"
+sortImports = true
+# seed/ is reference material; Markdown is prose (CLAUDE.md is hand-written).
+ignorePatterns = ["seed/**", "**/*.md", "e2e/__snapshots__/**"]

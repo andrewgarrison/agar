@@ -9,16 +9,7 @@
     "includes": ["**", "!seed", "!**/dist", "!**/.next", "!**/next-env.d.ts", "!e2e/__snapshots__", "!**/*.md"]
   },
   "formatter": {
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineWidth": 120
-  },
-  "javascript": {
-    "formatter": {
-      "quoteStyle": "single",
-      "jsxQuoteStyle": "double",
-      "semicolons": "always"
-    }
+    "enabled": false
   },
   "css": {
     "parser": {
@@ -47,11 +38,7 @@
     }
   },
   "assist": {
-    "actions": {
-      "source": {
-        "organizeImports": "on"
-      }
-    }
+    "enabled": false
   },
   "overrides": [
     {
