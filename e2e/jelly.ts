@@ -10,44 +10,65 @@ interface Box {
   height: number;
 }
 
+export interface Measure {
+  /** Which way to measure the centre: across (`x`, the default) or down (`y`). */
+  readonly axis?: 'x' | 'y';
+  /**
+   * The alpha, 0 to 255, above which a pixel counts as jelly, not shadow.
+   * Defaults to 128, for solid materials like milk; translucent tint needs less.
+   */
+  readonly solid?: number;
+}
+
 /**
  * Where the jelly is drawn on a component's canvas, once per frame for
- * `frames` frames: the x of its centre in CSS px from the component's left
- * edge, or null while nothing is drawn. Only solid pixels count, so the
- * shadow doesn't pull the centre sideways.
+ * `frames` frames: its centre in CSS px from the component's left edge (or
+ * top edge, for `y`), or null while nothing is drawn. Only solid pixels
+ * count, so the shadow doesn't pull the centre sideways.
  */
-export async function trackJelly(root: Locator, frames: number): Promise<(number | null)[]> {
-  const samples = await root.evaluate(async (element, count) => {
-    const canvas = element.querySelector('canvas');
-    const context = canvas?.getContext('2d');
-    if (!canvas || !context) {
-      throw new Error('no jelly canvas');
-    }
-    const centre = (): number | null => {
-      const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
-      let sum = 0;
-      let weight = 0;
-      for (let index = 3; index < data.length; index += 4) {
-        const alpha = data[index] ?? 0;
-        sum += alpha > 128 ? (((index - 3) / 4) % canvas.width) * alpha : 0;
-        weight += alpha > 128 ? alpha : 0;
+export async function trackJelly(
+  root: Locator,
+  frames: number,
+  { axis = 'x', solid = 128 }: Measure = {},
+): Promise<(number | null)[]> {
+  const samples = await root.evaluate(
+    async (element, { count, down, cutoff }) => {
+      const canvas = element.querySelector('canvas');
+      const context = canvas?.getContext('2d');
+      if (!canvas || !context) {
+        throw new Error('no jelly canvas');
       }
-      return weight === 0 ? null : sum / weight / (canvas.width / canvas.clientWidth) + canvas.offsetLeft;
-    };
-    const sample = async (left: number): Promise<(number | null)[]> => {
-      if (left === 0) {
-        return [];
-      }
-      const { promise, resolve } = Promise.withResolvers<number>();
-      requestAnimationFrame(resolve);
-      await promise;
-      const here = centre();
-      const rest = await sample(left - 1);
-      return [here, ...rest];
-    };
-    const path = await sample(count);
-    return path;
-  }, frames);
+      const centre = (): number | null => {
+        const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+        let sum = 0;
+        let weight = 0;
+        for (let index = 3; index < data.length; index += 4) {
+          const alpha = data[index] ?? 0;
+          const pixel = (index - 3) / 4;
+          const at = down ? Math.floor(pixel / canvas.width) : pixel % canvas.width;
+          sum += alpha > cutoff ? at * alpha : 0;
+          weight += alpha > cutoff ? alpha : 0;
+        }
+        return weight === 0
+          ? null
+          : sum / weight / (canvas.width / canvas.clientWidth) + (down ? canvas.offsetTop : canvas.offsetLeft);
+      };
+      const sample = async (left: number): Promise<(number | null)[]> => {
+        if (left === 0) {
+          return [];
+        }
+        const { promise, resolve } = Promise.withResolvers<number>();
+        requestAnimationFrame(resolve);
+        await promise;
+        const here = centre();
+        const rest = await sample(left - 1);
+        return [here, ...rest];
+      };
+      const path = await sample(count);
+      return path;
+    },
+    { count: frames, down: axis === 'y', cutoff: solid },
+  );
   return samples;
 }
 
@@ -58,11 +79,11 @@ function spread(samples: readonly (number | null)[]): number {
 }
 
 /** Waits for the jelly to stop moving, and returns where its centre came to rest. */
-export async function settledJelly(root: Locator): Promise<number> {
+export async function settledJelly(root: Locator, measure: Measure = {}): Promise<number> {
   const resting: number[] = [];
   await expect
     .poll(async () => {
-      const samples = await trackJelly(root, 10);
+      const samples = await trackJelly(root, 10, measure);
       resting.unshift(Number(samples.at(-1)));
       return spread(samples);
     })
