@@ -6,15 +6,35 @@
  */
 import { $ } from 'bun';
 
-const dirs = ['packages/core', 'packages/react'];
+interface PackageJson {
+  name: string;
+  version: string;
+}
 
-for (const dir of dirs) {
-  const pkg = await Bun.file(`${dir}/package.json`).json();
-  const published = await $`npm view ${pkg.name}@${pkg.version} version`.nothrow().quiet();
-  if (published.exitCode === 0 && published.text().trim() === pkg.version) {
-    console.log(`skip ${pkg.name}@${pkg.version} (already on npm)`);
-    continue;
+const PACKAGE_DIRS = ['packages/core', 'packages/react'] as const;
+
+function isPackageJson(value: unknown): value is PackageJson {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'name' in value &&
+    typeof value.name === 'string' &&
+    'version' in value &&
+    typeof value.version === 'string'
+  );
+}
+
+for (const dir of PACKAGE_DIRS) {
+  const pkg: unknown = await Bun.file(`${dir}/package.json`).json();
+  if (!isPackageJson(pkg)) {
+    throw new TypeError(`${dir}/package.json has no name or version`);
   }
-  console.log(`publish ${pkg.name}@${pkg.version}`);
-  await $`bun publish --access public`.cwd(dir);
+  const spec = `${pkg.name}@${pkg.version}`;
+  const published = await $`npm view ${spec} version`.nothrow().quiet();
+  if (published.exitCode === 0 && published.text().trim() === pkg.version) {
+    console.log(`skip ${spec} (already on npm)`);
+  } else {
+    console.log(`publish ${spec}`);
+    await $`bun publish --access public`.cwd(dir);
+  }
 }
