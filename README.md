@@ -12,13 +12,13 @@ Accessible React components with soft-body **jelly** surfaces: WebGL2 shapes tha
 ## Development
 
 ```bash
-pnpm install
-pnpm dev       # watch-build the packages and run the docs app on :3000
-pnpm verify    # lint, build, typecheck, unit tests, size and package checks
-pnpm e2e       # Playwright + axe in Chromium, Firefox and WebKit
+bun install
+bun run dev      # watch-build the packages and run the docs app on :3000
+bun run verify   # lint, build, typecheck, unit tests, size and package checks
+bun run e2e      # Playwright + axe in Chromium, Firefox and WebKit
 ```
 
-Changes to published packages need a changeset (`pnpm changeset`).
+Changes to published packages need a changeset (`bun changeset`).
 
 ## License
 

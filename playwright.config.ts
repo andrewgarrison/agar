@@ -25,7 +25,7 @@ export default defineConfig({
   ],
   webServer: {
     // CI builds the docs app first and serves the production build.
-    command: `pnpm --filter docs exec next ${CI ? 'start' : 'dev'} --port ${PORT}`,
+    command: `bun run --cwd apps/docs next ${CI ? 'start' : 'dev'} --port ${PORT}`,
     port: PORT,
     reuseExistingServer: !CI,
     timeout: 120_000,

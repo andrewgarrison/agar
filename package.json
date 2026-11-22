@@ -2,27 +2,37 @@
   "name": "agar-monorepo",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.15.1",
+  "packageManager": "bun@1.4.5-canary.20261121.1",
   "engines": {
     "node": ">=20.19"
   },
+  "workspaces": {
+    "packages": [
+      "packages/*",
+      "apps/*"
+    ],
+    "catalog": {
+      "@ui-sdk/core": "0.1.0-beta.14",
+      "@ui-sdk/react": "0.1.0-beta.14"
+    }
+  },
   "scripts": {
-    "build": "pnpm --filter \"./packages/*\" build",
-    "dev": "pnpm --parallel --filter \"./packages/*\" --filter docs dev",
-    "docs:build": "pnpm --filter docs build",
+    "build": "bun --filter './packages/*' build",
+    "dev": "bun --filter './packages/*' --filter docs dev",
+    "docs:build": "bun --filter docs build",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "typecheck": "tsc -p tsconfig.json && pnpm -r typecheck",
+    "typecheck": "tsc -p tsconfig.json && bun --filter '*' typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
     "e2e:update": "playwright test --update-snapshots",
     "size": "size-limit",
-    "check:pkg": "pnpm --filter \"./packages/*\" check:pkg",
-    "verify": "pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm size && pnpm check:pkg",
+    "check:pkg": "bun --filter './packages/*' check:pkg",
+    "verify": "bun run lint && bun run build && bun run typecheck && bun run test && bun run size && bun run check:pkg",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "release": "bun run build && bun scripts/publish.ts && changeset tag"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
@@ -47,5 +57,10 @@
     "typescript": "7.0.2",
     "vite": "8.3.8",
     "vitest": "5.1.1"
-  }
+  },
+  "trustedDependencies": [
+    "@biomejs/biome",
+    "esbuild",
+    "sharp"
+  ]
 }
