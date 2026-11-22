@@ -3,9 +3,9 @@
 // agents skip steps; a hook can't be skipped by forgetting it.
 //
 // - pre-commit: format and lint the staged files, fixing what can be fixed.
-// - pre-push:   the same checks CI's Checks job runs (scripts/ci/checks.ts),
-//               with the same budgets. E2E stays in CI: building the docs app
-//               alone takes longer than the 9 s local budget.
+// - pre-push:   the same checks CI's Checks job runs (`bun run verify`). E2E
+//               stays in CI: building the docs app alone takes longer than a
+//               push should wait.
 amends "package://github.com/jdx/hk/releases/download/v2.13.0/hk@2.13.0#/Config.pkl"
 
 local staged = new Mapping<String, Step> {
@@ -37,7 +37,7 @@ hooks {
   ["pre-push"] {
     steps {
       ["ci-checks"] {
-        check = "bun scripts/ci/checks.ts"
+        check = "bun run verify"
       }
     }
   }
