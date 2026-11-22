@@ -42,8 +42,9 @@ case "$mode" in
       dpkg-deb -x "$deb" "$dir"
     done
     rm -rf "$debs"
-    # Nothing reads these at runtime; they only make the cache slower to restore.
-    rm -rf "$dir"/usr/share/{doc,doc-base,man,info,locale,lintian,bug}
+    # Nothing reads these at runtime; they only make the cache slower to
+    # restore. Fonts count: fontconfig never looks in this folder.
+    rm -rf "$dir"/usr/share/{doc,doc-base,man,info,locale,lintian,bug,fonts}
     du -sh "$dir"
     du -sh "$dir"/usr/lib/"$arch_dir"/* "$dir"/usr/share/* 2>/dev/null | sort -rh | head -15
     ;;

@@ -89,7 +89,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/webkit-libs
-          key: webkit-libs-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.pw.outputs.image }}-${{ steps.pw.outputs.version }}
+          key: webkit-libs-v3-${{ runner.os }}-${{ runner.arch }}-${{ steps.pw.outputs.image }}-${{ steps.pw.outputs.version }}
       - name: Unpack WebKit's OS libraries
         if: matrix.browser == 'webkit' && steps.webkit-libs.outputs.cache-hit != 'true'
         run: scripts/ci/webkit-libs.sh unpack ~/webkit-libs
