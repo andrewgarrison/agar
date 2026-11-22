@@ -22,7 +22,7 @@ jobs:
       - run: bun run fmt:check
       - run: bun run lint
       - run: bun run build
-      - run: bun run typecheck
+      - run: bun check
       - run: bun run test
       - run: bun run size
       - run: bun run check:pkg
