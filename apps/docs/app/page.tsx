@@ -16,6 +16,9 @@ export default function Home(): JSX.Element {
         <li>
           <Link href="/switch">Switch</Link>
         </li>
+        <li>
+          <Link href="/tabs">Tabs</Link>
+        </li>
       </ul>
     </main>
   );

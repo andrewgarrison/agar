@@ -60,6 +60,21 @@ function extremes(body: JellyBody, seconds: number): { widest: number; thinnest:
   return { widest, thinnest };
 }
 
+// The body's box after a leftward move from AWAY to HOME, told `times` times
+// one step apart.
+function afterLeftwardMove(times: number): Rect {
+  const body = placed();
+  body.place(AWAY);
+  simulate(body, 0.25);
+  body.moveTo(HOME);
+  for (let told = 1; told < times; told += 1) {
+    body.step(STEP);
+    body.moveTo(HOME);
+  }
+  simulate(body, 0.12 - (times - 1) * STEP);
+  return bounds(body);
+}
+
 function widestOnFarMove(tetherK: number): number {
   const body = placed({ params: { tetherK } });
   body.moveTo(FAR);
@@ -140,6 +155,16 @@ describe('moving a body', () => {
     expect(height(bounds(body))).toBeCloseTo(height(panel), 0);
   });
 
+  it('ignores a target it is already heading for, so a leftward move stays stretched', () => {
+    expect.assertions(2);
+    const once = afterLeftwardMove(1);
+    const twice = afterLeftwardMove(2);
+    // Same path either way: the second call doesn't restart the move or swap
+    // which edge leads.
+    expect(twice.left).toBeCloseTo(once.left, 3);
+    expect(twice.right).toBeCloseTo(once.right, 3);
+  });
+
   it('squashes against a soft wall', () => {
     expect.assertions(1);
     const body = placed();
@@ -188,6 +213,29 @@ describe('pressing a body', () => {
     body.release(null);
     simulate(body, 3);
     expect(bounds(body).right).toBeCloseTo(HOME.right, 0);
+  });
+});
+
+describe('releasing onto its own box', () => {
+  it('springs back from a tug, as a release with no target does', () => {
+    expect.assertions(2);
+    const body = placed();
+    body.pressToward(AWAY);
+    simulate(body, 0.5);
+    body.release(HOME);
+    simulate(body, 3);
+    expect(bounds(body).right).toBeCloseTo(HOME.right, 0);
+    expect(body.isAsleep()).toBe(true);
+  });
+
+  it('lets go of a squish', () => {
+    expect.assertions(1);
+    const body = placed();
+    body.pressInPlace();
+    simulate(body, 0.5);
+    body.release(HOME);
+    simulate(body, 3);
+    expect(height(bounds(body))).toBeCloseTo(height(HOME), 0);
   });
 });
 

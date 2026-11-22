@@ -1,11 +1,17 @@
 // A body's four edges (and its squish), each a spring chasing a target.
 
 import type { Rect } from './geometry';
+import { sameRect } from './geometry';
 import type { JellyParams } from './params';
 import type { Spring } from './spring';
 import { createSpring, dampingFor, isStill, jump, stepSpring, tune } from './spring';
 
-function directionOf(delta: number): number {
+// A move with no sideways distance keeps the direction it had, so it never
+// swaps which edge leads.
+function directionOf(delta: number, previous: number): number {
+  if (delta === 0) {
+    return previous;
+  }
   return delta < 0 ? -1 : 1;
 }
 
@@ -56,7 +62,7 @@ export class Edges {
 
   public pressToward(home: Rect, target: Rect): void {
     const { params } = this;
-    this.direction = directionOf(target.left - home.left);
+    this.direction = directionOf(target.left - home.left, this.direction);
     const forward = this.direction > 0;
     const [lead, trail] = this.leadAndTrail();
     const from = forward ? home.right : home.left;
@@ -71,7 +77,7 @@ export class Edges {
   /** A sideways move: the leading edge goes first, the trailing edge a beat later. */
   public moveTo(home: Rect, target: Rect): void {
     const { params } = this;
-    this.direction = directionOf(target.left - home.left);
+    this.direction = directionOf(target.left - home.left, this.direction);
     const [lead, trail] = this.leadAndTrail();
     this.tune(lead, params.leadK, params.leadZ);
     this.tune(trail, params.trailK, params.trailZ);
@@ -99,6 +105,12 @@ export class Edges {
     }
     this.tether(dt, restWidth);
     this.walls(dt);
+  }
+
+  /** Whether every edge is already heading for `rect`. */
+  public isAimedAt(rect: Rect): boolean {
+    const goals = { left: this.left.goal, right: this.right.goal, top: this.top.goal, bottom: this.bottom.goal };
+    return sameRect(goals, rect);
   }
 
   public isStill(): boolean {

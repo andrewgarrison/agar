@@ -147,4 +147,141 @@
       display: none;
     }
   }
+
+  /* === Tabs === */
+  .agar-tabs {
+    --agar-tabs-list: light-dark(rgb(100 115 135 / 0.12), rgb(255 255 255 / 0.08));
+    --agar-tabs-edge: light-dark(rgb(100 115 135 / 0.35), rgb(255 255 255 / 0.18));
+    /* Unselected text keeps 4.5:1 against the list; selected text is darker
+       (lighter in dark mode) still, so the selection shows without the jelly. */
+    --agar-tabs-text: light-dark(#4b5563, #a7b0bd);
+    --agar-tabs-text-hover: light-dark(#1f2937, #d9dee6);
+    --agar-tabs-text-selected: light-dark(#0b1b2b, #fff);
+    --agar-tabs-indicator: light-dark(rgb(3 30 55 / 0.14), rgb(255 255 255 / 0.16));
+    --agar-tabs-focus: light-dark(#0369a1, #8db4ff);
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .agar-tabs[data-orientation='vertical'] {
+    flex-direction: row;
+  }
+
+  .agar-tabs-list {
+    position: relative;
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.375rem;
+    border: 1px solid var(--agar-tabs-edge);
+    border-radius: 1.5rem;
+    background: var(--agar-tabs-list);
+  }
+
+  .agar-tabs-list[data-orientation='vertical'] {
+    flex-direction: column;
+  }
+
+  .agar-tabs-tab {
+    position: relative;
+    z-index: 1;
+    box-sizing: border-box;
+    min-width: 60px;
+    height: 40px;
+    margin: 0;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--agar-tabs-text);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 300ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .agar-tabs-tab:hover {
+    color: var(--agar-tabs-text-hover);
+  }
+
+  .agar-tabs-tab[data-selected] {
+    color: var(--agar-tabs-text-selected);
+  }
+
+  .agar-tabs-tab:focus-visible {
+    outline: 2px solid var(--agar-tabs-focus);
+    outline-offset: -2px;
+  }
+
+  .agar-tabs-tab[data-disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* UI SDK measures the selected tab into these variables. The pill shows
+     until the jelly is ready, and whenever the jelly can't draw. */
+  .agar-tabs-indicator {
+    position: absolute;
+    z-index: 0;
+    top: calc(var(--active-tab-top) + 3px);
+    left: var(--active-tab-left);
+    width: var(--active-tab-width);
+    height: calc(var(--active-tab-height) - 6px);
+    border-radius: 9999px;
+    background: var(--agar-tabs-indicator);
+    pointer-events: none;
+  }
+
+  .agar-tabs-list[data-jelly='ready'] .agar-tabs-indicator {
+    opacity: 0;
+  }
+
+  .agar-tabs-panel {
+    border-radius: 0.5rem;
+    transition:
+      opacity 200ms ease,
+      translate 200ms ease;
+  }
+
+  .agar-tabs-panel:focus-visible {
+    outline: 2px solid var(--agar-tabs-focus);
+    outline-offset: 2px;
+  }
+
+  .agar-tabs-panel[data-starting-style] {
+    opacity: 0;
+    translate: 0 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .agar-tabs-tab,
+    .agar-tabs-panel {
+      transition: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .agar-tabs-list {
+      border-color: CanvasText;
+    }
+
+    .agar-tabs-tab[data-selected] {
+      color: HighlightText;
+    }
+
+    /* The jelly is drawn in fixed colours, so show the system-coloured pill. */
+    .agar-tabs-indicator,
+    .agar-tabs-list[data-jelly='ready'] .agar-tabs-indicator {
+      opacity: 1;
+      background: Highlight;
+    }
+
+    .agar-tabs-list .agar-jelly-canvas {
+      display: none;
+    }
+  }
 }

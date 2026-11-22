@@ -56,6 +56,7 @@ It lives in `packages/core/src` (extracted from the spike in Phase 1, Nov 2026, 
   - It uses a fixed 1/240 s step.
   - The goal shape is a rounded rectangle (`radius` option). Leaving `radius` out gives a pill.
   - API: `place`, `pressToward`, `pressInPlace`, `release`, `moveTo`, `morphTo`, `fadeTo`, `setBounds`, `setPointer`, `isAsleep`.
+  - `release(target)` and `moveTo(target)` ignore a target the body is already heading for (it only lets go of a press), and a move with no sideways distance keeps its direction.
   - Every body has its own `params`, so they can be tuned live.
 - **`renderer.ts`: one WebGL2 context for the whole page** (`gl-renderer.ts`, `canvas-renderer.ts`, `shader.ts`).
   - Browsers only allow about 16 live WebGL contexts per page, so components must never create their own.
@@ -122,6 +123,7 @@ A Bun workspace (`workspaces` and `catalog` in the root package.json; Bun is pin
   - Per-component CSS custom properties (`--agar-switch-track` and so on) stand in for tokens until the token set exists.
   - **Switch track (decided Nov 2026):** pale frosted glass when off, as in the spike, because a dark track showing through the translucent milk jelly made it look flat. The edge and the on fill keep 3:1; the white thumb on the off track is about 1.3:1, as on iOS, and the docs say so.
   - **Switch motion (decided Nov 2026):** a little bouncier than the spike, which matched PR #9 frame by frame but felt too damped. Its thumb pushes 1.4px into the end of the track (the spike: 0.4px) and settles in about 630ms (425ms). It also has the dock's hover lean at about half strength (`hoverReach` 2px within `hoverRadius` 34px; the dock uses 3px within 46px, which slides a 24px thumb rather than leaning it). The tuning lives in `THUMB_PARAMS` in `use-switch-jelly.ts`; the engine's defaults stay the spike's.
+  - **Tabs (Nov 2026):** `TabsList` renders the canvas and UI SDK's `TabsIndicator` itself, so consumers never place an indicator. The binding reads `orientation` from `data-orientation`, so no context is needed. The engine's lead-and-trail move and soft walls are sideways only, so vertical lists `morphTo()` the next tab, with no walls and no sideways tug. `morphTo()` keeps a press's squish, so the binding calls `release(null)` first. Arrow keys still focus a disabled tab (UI SDK follows the APG here); it just can't be selected. UI SDK writes the indicator twice per change. Until Nov 2026 the engine read a second `release()` to the same box as a zero-distance move to the right, so on a leftward move the back edge raced the front one and squeezed the jelly to a blob halfway across. The engine now ignores a target the body is already heading for, so bindings can pass the same box twice.
   - New form controls go in the `controlComponents` list for `jsx-a11y/label-has-associated-control` in `.oxlintrc.json`.
 - `apps/docs`: a custom Next.js app for the docs and playground. The spike's lab page is a starting point.
 - Tooling (chosen):
@@ -140,6 +142,8 @@ A Bun workspace (`workspaces` and `catalog` in the root package.json; Bun is pin
   - `bun run e2e` runs the Playwright tests. Its server uses port 3100, so it never collides with a dev server on 3000.
 - E2E keyboard tests use `tab()` from `e2e/keyboard.ts`. WebKit follows Safari, where plain Tab skips buttons and links.
 - E2E jelly checks use `e2e/jelly.ts`: it reads the drawn jelly back from the surface's canvas (`trackJelly`, `settledJelly`), and `patchContexts` refuses WebGL or every canvas context and counts WebGL2 contexts. `e2e/switch.spec.ts` is the template.
+  - Measure options: `axis: 'y'` measures down, and `solid` sets the alpha that counts as jelly. The default (128) suits milk; translucent tint needs `solid: 24`, and its highlight skews the centre by about 1px, so tint tests compare offsets from a tab, not absolute positions (`e2e/tabs.spec.ts`).
+- jsdom has no Web Animations, so `test.setup.ts` stubs `Element.prototype.getAnimations` to return none. UI SDK calls it before unmounting closing content (tab panels, popovers).
 - `next dev` won't run twice from the same app folder, so stop any docs dev server before `bun run e2e` (its server is `next dev` on port 3100).
 - UI SDK coverage (checked at `0.1.0-beta.14`): it has every planned component except **Data table**, which needs its own headless layer (TanStack Table is the likely choice). It also has `calendar`, `date-picker`, `drawer`, `slider` and `segmented-control`.
 - Before publishing, create the `agar` npm org to claim the `@agar` scope. `@agar/ui` was unused on npm in Nov 2026, but the unscoped `agar` is taken. If the scope isn't available, fall back to `@agarrison/agar`.
@@ -173,7 +177,7 @@ The spike from agarrison.dev's `jelly-design-spike` branch (closed PR #9 there).
 |---|---|---|
 | `body.ts`, `renderer.ts`, `stage.ts`, `palette.ts` | Done | Moved into `@agar/core` (Phase 1). The `.tsx` files below still import them by their old paths; read those imports as `@agar/core`. |
 | `useJelly.ts`, `JellySwitch.tsx` | Done | Moved into `@agar/react` as `internal/use-jelly.ts` and `switch/` (Nov 2026). The files below that import `./useJelly` should use `#internal/use-jelly` instead. |
-| `JellyTabs.tsx` | Spike quality | Takes a `tabs` array. A real API should be composable parts like UI SDK's. |
+| `JellyTabs.tsx` | Done | Moved into `@agar/react` as `tabs/` (Nov 2026), as composable parts. Deleted from `seed/`, with its CSS. |
 | `JellyPopover.tsx` | Spike quality | Same as above. Also has a hard-coded "Done" button. |
 | `jelly.css` | Spike quality | Uses the site's CSS variables (`--dock-bg`, `--accent-deep`, ...), which need replacing with Agar tokens. Its Switch styles have moved to `styles.css`. |
 | `JellyLab.example.tsx` | Reference | The `/lab` demo page, for the docs app. |
@@ -193,7 +197,7 @@ Verified in Chromium on desktop:
 - Once settled, only bodies with `breathe > 0` keep drawing.
 - Frame cost for the dock was about 0.13 ms.
 
-Verified by e2e in Chromium, Firefox and WebKit (Switch, Nov 2026; macOS locally, Linux in CI):
+Verified by e2e in Chromium, Firefox and WebKit (Switch and Tabs, Nov 2026; macOS locally, Linux in CI):
 - Every surface on a page shares one WebGL2 context.
 - The jelly is drawn where UI SDK's thumb is, springs there on a toggle, tugs on press, and springs back when the pointer is released off the switch.
 - Under reduced motion it never overshoots.

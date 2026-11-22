@@ -10,6 +10,7 @@
 
 import { Edges } from './edges';
 import type { Point, Rect } from './geometry';
+import { sameRect } from './geometry';
 import type { GoalBox } from './goal-shape';
 import { breathe, goalBox, reach, traceGoal } from './goal-shape';
 import { prefersReducedMotion } from './motion';
@@ -99,13 +100,19 @@ export class JellyBody {
     this.edges.poke.goal = 1;
   }
 
-  /** Lets go: springs to `target`, or back home when it's null. */
+  /**
+   * Lets go: springs to `target`, or back home when it's null. A `target` the
+   * body is already heading for doesn't restart the move, so callers can pass
+   * the same box twice.
+   */
   public release(target: Rect | null): void {
     this.edges.poke.goal = 0;
     if (this.home === null) {
       return;
     }
-    if (target === null) {
+    if (target !== null && sameRect(target, this.home)) {
+      this.settleUnlessAimed(this.home);
+    } else if (target === null) {
       this.edges.settleAt(this.home);
     } else {
       this.edges.moveTo(this.home, target);
@@ -174,6 +181,13 @@ export class JellyBody {
     const frame = { params, motion: reducedMotion ? 0 : 1, centerX: (box.left + box.right) / 2, dt };
     this.ring.step({ ...frame, halfWidth: (box.right - box.left) / 2 }, this.pts);
     this.ready = true;
+  }
+
+  // Only a press can have pulled the edges away from where they're heading.
+  private settleUnlessAimed(home: Rect): void {
+    if (!this.edges.isAimedAt(home)) {
+      this.edges.settleAt(home);
+    }
   }
 
   private ease(home: Rect, dt: number): void {

@@ -29,6 +29,7 @@
   "exports": {
     ".": "./dist/index.js",
     "./switch": "./dist/switch/index.js",
+    "./tabs": "./dist/tabs/index.js",
     "./visually-hidden": "./dist/visually-hidden/index.js",
     "./styles.css": "./dist/styles.css",
     "./package.json": "./package.json"

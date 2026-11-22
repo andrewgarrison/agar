@@ -7,79 +7,6 @@
   z-index: 0;
 }
 
-/* === Tabs === */
-.jelly-tabs {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1rem;
-}
-
-.jelly-tabs-list {
-  position: relative;
-  display: flex;
-  gap: 0.25rem;
-  padding: 0.375rem;
-  border: 1px solid var(--dock-border);
-  border-radius: 9999px;
-  background: var(--dock-bg);
-  backdrop-filter: blur(var(--glass-blur-strong));
-}
-
-.jelly-tab {
-  position: relative;
-  z-index: 1;
-  height: 40px;
-  min-width: 60px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 9999px;
-  background: transparent;
-  color: var(--dock-inactive-color);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: color 300ms ease;
-}
-
-.jelly-tab:hover {
-  color: var(--dock-inactive-hover-color);
-}
-
-.jelly-tab[data-selected] {
-  color: white;
-}
-
-/* The measured indicator. Shown as a plain pill until the jelly takes over. */
-.jelly-tabs-indicator {
-  position: absolute;
-  z-index: 0;
-  left: var(--active-tab-left);
-  top: calc(var(--active-tab-top) + 3px);
-  width: var(--active-tab-width);
-  height: calc(var(--active-tab-height) - 6px);
-  border-radius: 9999px;
-  background: rgba(3, 30, 55, 0.14);
-}
-
-.jelly-tabs-list[data-jelly] .jelly-tabs-indicator {
-  opacity: 0;
-}
-
-.jelly-tabs-panel {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-secondary);
-  transition: opacity 200ms ease, translate 200ms ease;
-}
-
-.jelly-tabs-panel[data-starting-style],
-.jelly-tabs-panel[data-ending-style] {
-  opacity: 0;
-  translate: 0 4px;
-}
-
 /* === Buttons (plain, for the spike) === */
 .jelly-button {
   height: 40px;
@@ -150,7 +77,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .jelly-tabs-panel,
   .jelly-popover-inner {
     transition: none;
   }
