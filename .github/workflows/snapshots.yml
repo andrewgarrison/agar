@@ -21,21 +21,18 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    # The same image CI's e2e jobs run in, so baselines match pixel for pixel.
-    container:
-      image: mcr.microsoft.com/playwright:v1.65.1-noble
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ github.head_ref || github.ref_name }}
       - uses: ./.github/actions/setup
+      - run: bunx playwright install chromium
       - run: bun run build && bun run docs:build
       - run: bun run e2e --project=chromium --grep @visual --update-snapshots
         env:
           CI: 'true'
       - name: Commit baselines
         run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add e2e/__snapshots__

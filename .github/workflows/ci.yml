@@ -31,7 +31,7 @@ jobs:
           filter: blob:none
       - uses: ./.github/actions/setup
       - name: 'Budget: setup'
-        run: scripts/ci/budget.sh setup 15
+        run: scripts/ci/budget.sh setup 15 --defer
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Checks
@@ -46,11 +46,9 @@ jobs:
     name: E2E + axe (${{ matrix.browser }})
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Browsers and their OS libraries come baked into Playwright's image, so
-    # there's no `playwright install --with-deps` on every run. Keep the tag
-    # equal to @playwright/test in package.json.
-    container:
-      image: mcr.microsoft.com/playwright:v1.65.1-noble
+    # Browsers are restored from cache. Playwright's image (browsers and OS
+    # libraries baked in) was measured too: pulling it takes ~21 s on hosted
+    # runners, more than the whole setup budget.
     strategy:
       fail-fast: false
       matrix:
@@ -62,6 +60,18 @@ jobs:
         with:
           filter: blob:none
       - uses: ./.github/actions/setup
+      - name: Read the Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
+      - name: Restore ${{ matrix.browser }}
+        id: browser-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
+      - name: Install browsers
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install ${{ matrix.browser }}
       - name: Restore Next.js build cache
         uses: actions/cache@v4
         with:
@@ -69,7 +79,7 @@ jobs:
           key: next-${{ hashFiles('bun.lock') }}-${{ hashFiles('apps/docs/**', 'packages/*/src/**') }}
           restore-keys: next-${{ hashFiles('bun.lock') }}-
       - name: 'Budget: setup'
-        run: scripts/ci/budget.sh setup 15
+        run: scripts/ci/budget.sh setup 15 --defer
         env:
           GH_TOKEN: ${{ github.token }}
       - name: Build

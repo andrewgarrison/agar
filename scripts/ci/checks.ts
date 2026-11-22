@@ -1,6 +1,8 @@
 /**
  * Runs every small check at once and reports every failure, not just the
- * first. Each check has a time budget; going over it fails the check, so CI
+ * first. Checks that read the build (types, size, package exports) start as
+ * soon as the build is done: the docs app is type-checked against the built
+ * declarations, which is what consumers get. Each check has a time budget; going over it fails the check, so CI
  * stays fast instead of slowly getting slower. Never raise a budget to make a
  * check pass: find out why it got slower.
  *
@@ -12,6 +14,8 @@ interface Check {
   name: string;
   command: string[];
   budgetMs: number;
+  /** Another check that has to pass first. */
+  after?: string;
 }
 
 interface Result {
@@ -24,11 +28,13 @@ interface Result {
 const CHECKS: Check[] = [
   { name: 'fmt', command: ['bun', 'fmt', '--no-script', '--check'], budgetMs: 1000 },
   { name: 'lint', command: ['bun', 'run', 'lint'], budgetMs: 1000 },
-  { name: 'check', command: ['bun', 'check'], budgetMs: 5000 },
   { name: 'test', command: ['bun', 'test'], budgetMs: 30_000 },
-  // Build, then the checks that read the build: bundle size and package exports.
-  { name: 'build', command: ['sh', '-c', 'bun run build && bun run size && bun run check:pkg'], budgetMs: 15_000 },
+  { name: 'build', command: ['bun', 'run', 'build'], budgetMs: 10_000 },
+  { name: 'check', command: ['bun', 'check'], budgetMs: 5000, after: 'build' },
+  { name: 'size', command: ['bun', 'run', 'size'], budgetMs: 5000, after: 'build' },
+  { name: 'package', command: ['bun', 'run', 'check:pkg'], budgetMs: 10_000, after: 'build' },
 ];
+const SKIPPED = -1;
 
 const MS_PER_SECOND = 1000;
 const COLUMN = 8;
@@ -54,12 +60,28 @@ function seconds(ms: number): string {
 
 const wanted = new Set(process.argv.slice(2));
 const selected = wanted.size === 0 ? CHECKS : CHECKS.filter((check) => wanted.has(check.name));
-const results = await Promise.all(
-  selected.map(async (check) => {
-    const result = await run(check);
-    return result;
-  }),
-);
+async function runAfter(check: Check, dependency: Promise<Result> | undefined): Promise<Result> {
+  if (dependency !== undefined) {
+    const before = await dependency;
+    if (before.exitCode !== 0) {
+      return { check, ms: 0, exitCode: SKIPPED, output: `skipped: ${check.after ?? ''} failed` };
+    }
+  }
+  const result = await run(check);
+  return result;
+}
+
+async function runAll(checks: Check[]): Promise<Result[]> {
+  const started = new Map<string, Promise<Result>>();
+  for (const check of checks) {
+    const dependency = check.after === undefined ? undefined : started.get(check.after);
+    started.set(check.name, runAfter(check, dependency));
+  }
+  const all = await Promise.all(started.values());
+  return all;
+}
+
+const results = await runAll(selected);
 const inCi = inGitHubActions();
 
 for (const result of results) {
@@ -75,7 +97,9 @@ console.log('\ncheck    time     budget   result');
 for (const { check, ms, exitCode } of results) {
   const overBudget = ms > check.budgetMs;
   let verdict = 'ok';
-  if (exitCode !== 0) {
+  if (exitCode === SKIPPED) {
+    verdict = `SKIPPED (${check.after ?? ''} failed)`;
+  } else if (exitCode !== 0) {
     verdict = `FAILED (exit ${exitCode})`;
   } else if (overBudget) {
     verdict = 'OVER BUDGET';

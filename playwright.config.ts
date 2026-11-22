@@ -11,7 +11,7 @@ export default defineConfig({
   // No retries, in CI or locally: a test that needs one has a bug. Find it.
   retries: 0,
   reporter: CI ? [['github'], ['html', { open: 'never' }]] : 'list',
-  // Visual baselines are rendered in CI's Playwright container (see
+  // Visual baselines are rendered on CI's Linux runners (see
   // .github/workflows/snapshots.yml); a Mac run would render different fonts.
   snapshotPathTemplate: '{testDir}/__snapshots__/{testFilePath}/{arg}-{projectName}{ext}',
   expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },

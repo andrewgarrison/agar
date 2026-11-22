@@ -34,7 +34,7 @@ interface Run {
 }
 
 const SETUP_STEP =
-  /^(?:Set up job|Initialize containers|Record job start|Run actions\/checkout|Run \.\/\.github\/actions\/setup|Install browsers|Run bunx playwright install|Restore|Budget: setup)/u;
+  /^(?:Set up job|Initialize containers|Record job start|Run actions\/checkout|Run \.\/\.github\/actions\/setup|Read the Playwright version|Install browsers|Run bunx playwright install|Restore|Budget: setup)/u;
 const DEFAULT_RUNS = 150;
 const PER_PAGE = 100;
 const MS_PER_SECOND = 1000;
