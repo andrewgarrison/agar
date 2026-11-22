@@ -1,8 +1,9 @@
 import type { JSX } from 'react';
 
 const theming = `.agar-switch {
-  --agar-switch-track: light-dark(#6e7889, #4a5466);
-  --agar-switch-track-checked: light-dark(#1f5fd1, #3b7be8);
+  --agar-switch-track: light-dark(rgb(100 115 135 / 0.2), rgb(255 255 255 / 0.1));
+  --agar-switch-track-checked: light-dark(#0284c7, #2563eb);
+  --agar-switch-edge: light-dark(#7b8594, #737d8c);
 }`;
 
 /** Colours, themes and custom properties. */

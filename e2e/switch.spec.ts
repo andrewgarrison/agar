@@ -26,6 +26,13 @@ async function open(page: Page): Promise<Locator> {
   return airplane(page);
 }
 
+// Clicks the switch, then moves the mouse away so the hover doesn't pull the
+// jelly toward it.
+async function clickAndLeave(page: Page, root: Locator): Promise<void> {
+  await root.click();
+  await page.mouse.move(0, 0);
+}
+
 // Presses the switch's off end and drags off it before letting go.
 async function pressAndDragOff(page: Page, root: Locator): Promise<(number | null)[]> {
   const box = await boxOf(root);
@@ -65,11 +72,13 @@ test.describe('switch', () => {
     await page.keyboard.press('Space');
     await expect(readOnly).toHaveAttribute('aria-checked', 'true');
   });
+});
 
+test.describe('switch jelly', () => {
   test('the jelly follows the state', async ({ page }) => {
     const root = await open(page);
     expect(gap(await settledJelly(root), await thumbCentre(root))).toBeLessThan(1);
-    await root.click();
+    await clickAndLeave(page, root);
     await expect(root).toHaveAttribute('aria-checked', 'true');
     const on = await settledJelly(root);
     expect(gap(on, await thumbCentre(root))).toBeLessThan(1);
@@ -86,10 +95,23 @@ test.describe('switch', () => {
     expect(gap(await settledJelly(root), rest)).toBeLessThan(1);
   });
 
+  test('the jelly leans toward a hovering mouse, and back when it leaves', async ({ page }) => {
+    const root = await open(page);
+    const rest = await settledJelly(root);
+    const box = await boxOf(root);
+    // Just right of the off thumb: a gentle lean, well under a pixel.
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height / 2);
+    expect(await settledJelly(root)).toBeGreaterThan(rest + 0.2);
+    await page.mouse.move(0, 0);
+    expect(gap(await settledJelly(root), rest)).toBeLessThan(0.25);
+  });
+
   test('every surface shares one WebGL context', async ({ page }) => {
     await patchContexts(page);
-    await open(page);
+    const root = await open(page);
     await expect(page.locator('[data-jelly="ready"]')).toHaveCount(4);
+    // The shared renderer makes its context on the first draw, not at mount.
+    await settledJelly(root);
     const made = await webGLContexts(page);
     // One shared context, or none where the browser has no WebGL2 (Canvas 2D draws instead).
     expect(made).toBe(Number(await supportsWebGL2(page)));
@@ -111,7 +133,7 @@ test.describe('switch', () => {
   test('falls back to Canvas 2D without WebGL', async ({ page }) => {
     await patchContexts(page, ['webgl2', 'webgl']);
     const root = await open(page);
-    await root.click();
+    await clickAndLeave(page, root);
     expect(gap(await settledJelly(root), await thumbCentre(root))).toBeLessThan(1);
     expect(await webGLContexts(page)).toBe(0);
   });
