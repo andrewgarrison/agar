@@ -1,11 +1,16 @@
 /**
  * @agar/core: the jelly engine (physics, shared renderer, animation stage) and
  * design tokens. Pure TypeScript, no React, no UI SDK.
- *
- * Phase 0 placeholder. The engine moves here from `seed/` in Phase 1.
  */
+export type { BodyOptions } from './body';
+export type { Point, Rect } from './geometry';
+export type { DrawItem, DrawTarget } from './draw-target';
+export type { JellyParams } from './params';
+export type { JellyMaterial, JellyPalette, Rgba, Theme } from './palettes';
 
-/** True when the user has asked the OS for reduced motion. Safe to call during SSR. */
-export function prefersReducedMotion(): boolean {
-  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
+export { JellyBody } from './body';
+export { prefersReducedMotion } from './motion';
+export { JELLY_PALETTES } from './palettes';
+export { DEFAULT_PARAMS, RING, ROUND, STEP } from './params';
+export { drawSurface, isWebGL } from './renderer';
+export { JellySurface, surfaceCount } from './stage';

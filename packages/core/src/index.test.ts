@@ -1,18 +1,20 @@
 // @vitest-environment node
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { prefersReducedMotion } from './index';
+import { JellyBody, surfaceCount } from './index';
+import { fragmentShader } from './shader';
 
-describe(prefersReducedMotion, () => {
-  it('is false without matchMedia (SSR)', () => {
-    expect.assertions(1);
-    vi.stubGlobal('matchMedia', undefined);
-    expect(prefersReducedMotion()).toBe(false);
+describe('@agar/core', () => {
+  it('imports without a DOM and makes no surfaces (SSR)', () => {
+    expect.assertions(2);
+    expect(surfaceCount()).toBe(0);
+    expect(() => new JellyBody({ reducedMotion: false })).not.toThrow();
   });
 
-  it('reads the media query', () => {
-    expect.assertions(1);
-    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('reduce') }));
-    expect(prefersReducedMotion()).toBe(true);
+  it('compiles the shader for the ring size', () => {
+    expect.assertions(2);
+    const source = fragmentShader(56);
+    expect(source.startsWith('#version 300 es\n')).toBe(true);
+    expect(source).toContain('#define N 56\n');
   });
 });
