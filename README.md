@@ -14,7 +14,7 @@ Accessible React components with soft-body **jelly** surfaces: WebGL2 shapes tha
 ```bash
 bun install
 bun run dev      # watch-build the packages and run the docs app on :3000
-bun run verify   # lint, build, typecheck, unit tests, size and package checks
+bun run verify   # format, lint, build, typecheck (bun check), unit tests, size and package checks
 bun run e2e      # Playwright + axe in Chromium, Firefox and WebKit
 ```
 

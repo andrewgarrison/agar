@@ -39,8 +39,8 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
-    "typecheck": "tsc -p tsconfig.json",
-    "check:pkg": "publint --strict && attw --pack . --profile esm-only --exclude-entrypoints ./styles.css"
+    "check:pkg": "publint --strict && attw --pack . --profile esm-only --exclude-entrypoints ./styles.css",
+    "check": "bun check --no-script"
   },
   "dependencies": {
     "@agar/core": "workspace:*"

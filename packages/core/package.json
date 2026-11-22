@@ -34,7 +34,7 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
-    "typecheck": "tsc -p tsconfig.json",
-    "check:pkg": "publint --strict && attw --pack . --profile esm-only"
+    "check:pkg": "publint --strict && attw --pack . --profile esm-only",
+    "check": "bun check --no-script"
   }
 }
