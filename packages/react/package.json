@@ -28,11 +28,15 @@
   ],
   "exports": {
     ".": "./dist/index.js",
+    "./switch": "./dist/switch/index.js",
     "./visually-hidden": "./dist/visually-hidden/index.js",
     "./styles.css": "./dist/styles.css",
     "./package.json": "./package.json"
   },
   "types": "./dist/index.d.ts",
+  "imports": {
+    "#internal/*": "./src/internal/*.ts"
+  },
   "publishConfig": {
     "access": "public"
   },
