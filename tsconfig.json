@@ -1,0 +1,7 @@
+{
+  // Tooling only: root configs, e2e specs and package build configs. Each
+  // package and app has its own tsconfig for its source.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": { "isolatedDeclarations": false, "declaration": false, "types": ["node"] },
+  "include": ["*.config.ts", "vitest.setup.ts", "e2e", "packages/*/tsdown.config.ts"]
+}

@@ -1,0 +1,11 @@
+[
+  { "name": "@agar/core", "path": "packages/core/dist/index.js", "import": "*", "limit": "1 kB" },
+  {
+    "name": "@agar/react/visually-hidden",
+    "path": "packages/react/dist/visually-hidden/index.js",
+    "import": "{ VisuallyHidden }",
+    "ignore": ["react", "react-dom", "@ui-sdk/react", "@ui-sdk/core"],
+    "limit": "1 kB"
+  },
+  { "name": "@agar/react/styles.css", "path": "packages/react/dist/styles.css", "rolldown": false, "limit": "2 kB" }
+]

@@ -1,0 +1,58 @@
+{
+  "name": "@agar/react",
+  "version": "0.0.0",
+  "description": "Accessible React components with soft-body jelly surfaces, built on UI SDK.",
+  "license": "MIT",
+  "author": "Andrew Garrison",
+  "homepage": "https://github.com/andrewgarrison/agar#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrewgarrison/agar.git",
+    "directory": "packages/react"
+  },
+  "bugs": "https://github.com/andrewgarrison/agar/issues",
+  "keywords": [
+    "react",
+    "design-system",
+    "components",
+    "accessibility",
+    "webgl",
+    "jelly"
+  ],
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./visually-hidden": "./dist/visually-hidden/index.js",
+    "./styles.css": "./dist/styles.css",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "typecheck": "tsc -p tsconfig.json",
+    "check:pkg": "publint --strict && attw --pack . --profile esm-only --exclude-entrypoints ./styles.css"
+  },
+  "dependencies": {
+    "@agar/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@ui-sdk/core": "0.1.0-beta.14",
+    "@ui-sdk/react": "0.1.0-beta.14",
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "devDependencies": {
+    "@ui-sdk/core": "catalog:",
+    "@ui-sdk/react": "catalog:"
+  }
+}
