@@ -94,7 +94,7 @@ Rule of thumb: when deciding *what* happens, ask UI SDK. When deciding *how it l
 - `@ui-sdk/core/gesture` has `createVelocityTracker`, `solveSpring` and `rubberBand`. These are useful for Slider and Drawer.
 - UI SDK ships an agent skill, which may be worth installing: `npx skills@latest add vercel-labs/ui --skill ui-sdk`.
 
-## Proposed package layout (not decided yet; confirm before building)
+## Package layout (decided; scaffolded in Phase 0)
 
 A pnpm workspace:
 
@@ -107,13 +107,23 @@ A pnpm workspace:
   - Each component is its own entry point, for tree-shaking (`@agar/react/switch`).
   - Mark client components with a `"use client"` banner.
   - CSS ships as a side-effect import (`@agar/react/styles.css`, declared in `sideEffects`).
-- `apps/docs`: the docs and playground. The spike's lab page is a starting point.
-- Tooling to choose:
-  - A library bundler: tsdown or tsup.
-  - Changesets for releases.
-  - Vitest with Testing Library for unit and interaction tests.
-  - Playwright for visual regression tests and axe.
-  - A size-limit check in CI.
+  - `@agar/react` **wraps** UI SDK in its own composable parts with its own prop types, rather than re-exporting UI SDK's parts. This keeps UI SDK's beta churn from reaching consumers.
+  - `styles.css` declares `@layer ui-sdk, agar;`, so consumers don't need to add the `@layer ui-sdk;` line themselves. Their unlayered CSS beats both layers.
+- `apps/docs`: a custom Next.js app for the docs and playground. The spike's lab page is a starting point.
+- Tooling (chosen):
+  - **tsdown**: `unbundle` mode, so there's one output file per module and each keeps its `'use client'` banner.
+  - **Changesets** for releases. `.github/workflows/release.yml` opens a "Version packages" PR, and merging it publishes.
+  - **Vitest** with Testing Library: jsdom for `react`, node for `core`.
+  - **Playwright** with axe, on Chromium, Firefox and WebKit. Visual baselines are Chromium-only and rendered on Linux. Regenerate them with the "Update visual snapshots" workflow, never from a Mac.
+  - **size-limit**, `.size-limit.json`, with one entry per component entry point.
+  - **publint** and **attw**, which check `pnpm check:pkg` before publishing.
+  - **Biome** for lint and format. It skips `seed/` and Markdown, because Biome would reformat this brief.
+  - TypeScript 7 with `isolatedDeclarations` in the packages, so exported functions need explicit return types.
+- Commands:
+  - `pnpm verify` runs everything CI's check job runs. It isn't called `pnpm ci` because that name is reserved by pnpm.
+  - `pnpm e2e` runs the Playwright tests. Its server uses port 3100, so it never collides with a dev server on 3000.
+- E2E keyboard tests use `tab()` from `e2e/keyboard.ts`. WebKit follows Safari, where plain Tab skips buttons and links.
+- UI SDK coverage (checked at `0.1.0-beta.14`): it has every planned component except **Data table**, which needs its own headless layer (TanStack Table is the likely choice). It also has `calendar`, `date-picker`, `drawer`, `slider` and `segmented-control`.
 - Before publishing, create the `agar` npm org to claim the `@agar` scope. `@agar/ui` was unused on npm in Nov 2026, but the unscoped `agar` is taken. If the scope isn't available, fall back to `@agarrison/agar`.
 
 ## Starting code (`seed/`)
@@ -164,7 +174,7 @@ Not yet tested:
   - Slider: a thumb that stretches with the drag speed.
   - Dialog, Drawer and Toast: panel surfaces.
   - Accordion: a height that overshoots and settles.
-- Should Agar expose UI SDK's parts directly (re-exported, styled), or wrap them in its own API? This affects how much of UI SDK's beta churn leaks to users.
+- ~~Should Agar expose UI SDK's parts directly, or wrap them?~~ Decided: wrap them (see Package layout).
 
 ## Conventions
 

@@ -1,0 +1,40 @@
+{
+  "name": "@agar/core",
+  "version": "0.0.0",
+  "description": "Agar's framework-agnostic jelly engine and design tokens.",
+  "license": "MIT",
+  "author": "Andrew Garrison",
+  "homepage": "https://github.com/andrewgarrison/agar#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/andrewgarrison/agar.git",
+    "directory": "packages/core"
+  },
+  "bugs": "https://github.com/andrewgarrison/agar/issues",
+  "keywords": [
+    "design-system",
+    "webgl",
+    "spring-physics",
+    "jelly",
+    "tokens"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "typecheck": "tsc -p tsconfig.json",
+    "check:pkg": "publint --strict && attw --pack . --profile esm-only"
+  }
+}
