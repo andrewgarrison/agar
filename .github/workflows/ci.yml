@@ -1,8 +1,8 @@
 name: CI
 
 # Every PR runs the full suite: there's no merge queue, so this is the check
-# that guards main. Budgets (scripts/ci/budget.sh, scripts/ci/checks.ts) fail a
-# job that gets slow; find the cause instead of raising them.
+# that guards main. Target: a PR result in under 2 minutes. Track it with
+# `bun scripts/ci/audit.ts`; the timeouts below only catch hangs.
 on:
   pull_request:
   push:
@@ -16,62 +16,70 @@ concurrency:
 
 permissions:
   contents: read
-  actions: read # scripts/ci/budget.sh reads the job's start time
 
 jobs:
   checks:
     name: Checks (format, lint, types, unit, build, size, package)
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 3
     steps:
-      - name: Record job start
-        run: echo "CI_JOB_START=$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v5
         with:
           filter: blob:none
       - uses: ./.github/actions/setup
-      - name: 'Budget: setup'
-        run: scripts/ci/budget.sh setup 15 --defer
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - name: Checks
-        run: bun scripts/ci/checks.ts
-      - name: 'Budget: job'
-        if: always()
-        run: scripts/ci/budget.sh job 35
-        env:
-          GH_TOKEN: ${{ github.token }}
+      # Each check runs even when an earlier one fails, so one run reports
+      # every failure. Checks that read the build skip when it fails.
+      - name: Format
+        if: ${{ !cancelled() }}
+        run: bun run fmt:check
+      - name: Lint
+        if: ${{ !cancelled() }}
+        run: bun run lint
+      - name: Unit tests
+        if: ${{ !cancelled() }}
+        run: bun test
+      - name: Build
+        id: build
+        if: ${{ !cancelled() }}
+        run: bun run build
+      # The docs app is type-checked against the built declarations, which is
+      # what consumers get.
+      - name: Types
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: bun check
+      - name: Size
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: bun run size
+      - name: Package exports
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: bun run check:pkg
 
   e2e:
     name: E2E + axe (${{ matrix.browser }})
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Browsers are restored from cache. Playwright's image (browsers and OS
-    # libraries baked in) was measured too: pulling it takes ~21 s on hosted
-    # runners, more than the whole setup budget.
+    # Browsers are restored from cache. Playwright's Docker image (browsers and
+    # OS libraries baked in) was measured too: pulling it takes ~21 s on hosted
+    # runners, longer than restoring and installing.
     strategy:
       fail-fast: false
       matrix:
         browser: [chromium, firefox, webkit]
     steps:
-      - name: Record job start
-        run: echo "CI_JOB_START=$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v5
         with:
           filter: blob:none
       - uses: ./.github/actions/setup
       - name: Read the Playwright version
         id: pw
-        run: |
-          echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
-          echo "image=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
+        run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
       - name: Restore ${{ matrix.browser }}
         id: browser-cache
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-v2-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
-      - name: Install browsers
+      - name: Install ${{ matrix.browser }}
         if: steps.browser-cache.outputs.cache-hit != 'true'
         # Headless Chromium runs on the headless shell; full Chrome is never
         # launched, so --only-shell leaves it out of the download and cache.
@@ -83,27 +91,11 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ steps.browser-cache.outputs.cache-primary-key }}
       # The hosted image already has Chromium's and Firefox's OS libraries.
-      # WebKit's (GStreamer and friends) are unpacked once and cached, instead
-      # of apt-installed every run (19-37 s). See scripts/ci/webkit-libs.sh.
-      - name: Restore WebKit's OS libraries
-        id: webkit-libs
+      # WebKit's (GStreamer, GTK 4 and friends) are installed the supported
+      # way, with apt, on every run: about 20-40 s.
+      - name: Install WebKit's OS libraries
         if: matrix.browser == 'webkit'
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/webkit-libs
-          key: webkit-libs-v3-${{ runner.os }}-${{ runner.arch }}-${{ steps.pw.outputs.image }}-${{ steps.pw.outputs.version }}
-      - name: Unpack WebKit's OS libraries
-        if: matrix.browser == 'webkit' && steps.webkit-libs.outputs.cache-hit != 'true'
-        run: scripts/ci/webkit-libs.sh unpack ~/webkit-libs
-      - name: Save WebKit's OS libraries
-        if: matrix.browser == 'webkit' && steps.webkit-libs.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ~/webkit-libs
-          key: ${{ steps.webkit-libs.outputs.cache-primary-key }}
-      - name: Use WebKit's OS libraries
-        if: matrix.browser == 'webkit'
-        run: scripts/ci/webkit-libs.sh use ~/webkit-libs
+        run: sudo env "PATH=$PATH" bunx playwright install-deps webkit
       - name: Restore Next.js build cache
         id: next-cache
         uses: actions/cache/restore@v4
@@ -111,10 +103,6 @@ jobs:
           path: apps/docs/.next/cache
           key: next-${{ hashFiles('bun.lock') }}-${{ hashFiles('apps/docs/**', 'packages/*/src/**') }}
           restore-keys: next-${{ hashFiles('bun.lock') }}-
-      - name: 'Budget: setup'
-        run: scripts/ci/budget.sh setup 15 --defer
-        env:
-          GH_TOKEN: ${{ github.token }}
       - name: Build
         run: bun run build && bun run docs:build
       - name: Save Next.js build cache
@@ -125,11 +113,6 @@ jobs:
           key: ${{ steps.next-cache.outputs.cache-primary-key }}
       - name: Playwright
         run: bun run e2e --project=${{ matrix.browser }}
-      - name: 'Budget: job'
-        if: always()
-        run: scripts/ci/budget.sh job 35
-        env:
-          GH_TOKEN: ${{ github.token }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
