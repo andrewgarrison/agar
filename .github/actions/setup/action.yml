@@ -17,12 +17,17 @@ runs:
       uses: actions/cache@v4
       with:
         path: ~/.bun-ci
-        key: bun-${{ runner.os }}-${{ runner.arch }}-${{ steps.bun.outputs.version }}
+        # Bump the v<n> prefix when the cached layout changes.
+        key: bun-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.bun.outputs.version }}
 
     - name: Install Bun
-      if: steps.bun-cache.outputs.cache-hit != 'true'
       shell: bash
-      run: npm install --prefix ~/.bun-ci --no-audit --no-fund --no-save "bun@${{ steps.bun.outputs.version }}"
+      # Checks for the binary rather than trusting the cache hit: a cache
+      # saved under another $HOME restores somewhere else.
+      run: |
+        if [[ ! -x "$HOME/.bun-ci/node_modules/.bin/bun" ]]; then
+          npm install --prefix ~/.bun-ci --no-audit --no-fund --no-save "bun@${{ steps.bun.outputs.version }}"
+        fi
 
     - name: Put Bun on PATH
       shell: bash
@@ -38,7 +43,7 @@ runs:
           node_modules
           packages/*/node_modules
           apps/*/node_modules
-        key: deps-${{ runner.os }}-${{ runner.arch }}-bun${{ steps.bun.outputs.version }}-${{ hashFiles('bun.lock') }}
+        key: deps-v2-${{ runner.os }}-${{ runner.arch }}-bun${{ steps.bun.outputs.version }}-${{ hashFiles('bun.lock') }}
 
     - name: Install dependencies
       if: steps.deps-cache.outputs.cache-hit != 'true'
