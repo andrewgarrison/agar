@@ -144,7 +144,8 @@ How CI is shaped (`.github/workflows/ci.yml`):
 - **Budgets:** setup 15 s and job 35 s, counted from when GitHub *started* the job (`scripts/ci/budget.sh`).
 - **Cancellation:** a new commit cancels a PR's run. Runs on `main` are never cancelled.
 - **Audit:** `bun scripts/ci/audit.ts [--branch b] [--runs n]` splits real runs into waiting, setup and running at p50 and p95. Fix the biggest bucket first.
-- **Known gap:** the WebKit job installs its OS libraries with `apt` on every run (about 37 s), so it is over budget on hosted runners. The fix is a runner image with the toolchain baked in (Blacksmith or GitHub custom images). Don't raise the budget.
+- **CI stays free:** GitHub-hosted runners on the public repo only. No paid or third-party runners (Blacksmith was considered and rejected, Nov 2026).
+- **WebKit's OS libraries:** the hosted image lacks them, and `apt` installing them took up to 37 s a run. `scripts/ci/webkit-libs.sh` unpacks the packages once into a cached folder, without installing them, and each run registers that folder with `ldconfig` and points GStreamer and libglvnd (`__EGL_VENDOR_LIBRARY_DIRS`) at it. If WebKit hangs while creating a page, something it finds by directory instead of through the linker is missing: run with `DEBUG=pw:browser*` to see its stderr.
 - **Revisit later:** test sharding and per-file timings. With a few tests running in well under a second, one shard is fastest. Buy cores before shards.
 
 ## Starting code (`seed/`)
