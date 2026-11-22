@@ -121,8 +121,18 @@ jobs:
         with:
           path: apps/docs/.next/cache
           key: ${{ steps.next-cache.outputs.cache-primary-key }}
+      - name: DEBUG webkit libs
+        if: matrix.browser == 'webkit'
+        run: |
+          cd ~/webkit-libs
+          ls usr/lib/x86_64-linux-gnu | grep -E '^(dri|gio|gdk-pixbuf|gstreamer|libEGL_mesa|libGLX_mesa|webkit|girepository)' || true
+          ls usr/share | head -50
+          find . -path '*glvnd*' -o -name 'gst-plugin-scanner' -o -name '*.cache' | head -20
+          find . -type l -lname '/*' | head -20
       - name: Playwright
         run: bun run e2e --project=${{ matrix.browser }}
+        env:
+          DEBUG: ${{ matrix.browser == 'webkit' && 'pw:browser*' || '' }}
       - name: 'Budget: job'
         if: always()
         run: scripts/ci/budget.sh job 35
