@@ -42,6 +42,10 @@ case "$mode" in
       dpkg-deb -x "$deb" "$dir"
     done
     rm -rf "$debs"
+    # Nothing reads these at runtime; they only make the cache slower to restore.
+    rm -rf "$dir"/usr/share/{doc,doc-base,man,info,locale,lintian,bug}
+    du -sh "$dir"
+    du -sh "$dir"/usr/lib/"$arch_dir"/* "$dir"/usr/share/* 2>/dev/null | sort -rh | head -15
     ;;
   use)
     # Register the folders with the linker cache rather than LD_LIBRARY_PATH:
