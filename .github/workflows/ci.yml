@@ -72,6 +72,11 @@ jobs:
       - name: Install browsers
         if: steps.browser-cache.outputs.cache-hit != 'true'
         run: bunx playwright install ${{ matrix.browser }}
+      # The hosted image already has Chromium's and Firefox's OS libraries;
+      # WebKit's (GStreamer and friends) have to be installed every run.
+      - name: Install WebKit's OS libraries
+        if: matrix.browser == 'webkit'
+        run: sudo env "PATH=$PATH" bunx playwright install-deps webkit
       - name: Restore Next.js build cache
         uses: actions/cache@v4
         with:
