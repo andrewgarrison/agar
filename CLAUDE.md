@@ -118,7 +118,8 @@ A Bun workspace (`workspaces` and `catalog` in the root package.json; Bun is pin
   - **size-limit**, `.size-limit.json`, with one entry per component entry point.
   - **publint** and **attw**, which check `bun run check:pkg` before publishing.
   - **`bun lint`** (oxlint rules, read from `.oxlintrc.json`): every category is on, at error, with `--type-aware`. Each rule that's off says why. Lint rules only stay or grow.
-  - **Biome**, narrowed to what `bun lint` can't check: every recommended CSS rule, plus seven JavaScript rules with no oxlint equivalent (`noSvgWithoutTitle` and six others, listed in `biome.json`). Until the `bun fmt` PR it also formats. It skips `seed/` and Markdown.
+  - **Biome**, narrowed to what `bun lint` can't check: every recommended CSS rule, plus seven JavaScript rules with no oxlint equivalent (`noSvgWithoutTitle` and six others, listed in `biome.json`). It doesn't format. It skips `seed/` and Markdown.
+  - **`bun fmt`** formats JS, TS, JSON, CSS, YAML and TOML, and sorts imports. Its settings are in `bunfig.toml` `[fmt]`. It skips `seed/` and Markdown, so this brief stays hand-written. CI runs `bun run fmt:check`.
   - TypeScript 7 with `isolatedDeclarations` in the packages, so exported functions need explicit return types.
 - Commands:
   - `bun run verify` runs everything CI's check job runs.

@@ -30,7 +30,7 @@ jobs:
       - run: bun run build && bun run docs:build
       - run: bun run e2e --project=chromium --grep @visual --update-snapshots
         env:
-          CI: "true"
+          CI: 'true'
       - name: Commit baselines
         run: |
           git config user.name "github-actions[bot]"
