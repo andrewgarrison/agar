@@ -23,7 +23,7 @@ jobs:
       - run: bun run lint
       - run: bun run build
       - run: bun check
-      - run: bun run test
+      - run: bun test
       - run: bun run size
       - run: bun run check:pkg
 
