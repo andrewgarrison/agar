@@ -3,13 +3,13 @@
 # hosted Ubuntu image doesn't have. `playwright install-deps` apt-installs them
 # on every run, which took 19-37 s. Instead, on a cache miss, this downloads
 # those packages once and unpacks them into <dir> without installing anything;
-# the job caches <dir>, and every run points the dynamic linker at it.
+# the job caches <dir>, and every run registers it with the linker.
 #
 #   scripts/ci/webkit-libs.sh unpack <dir>   # cache miss: fill <dir>
-#   scripts/ci/webkit-libs.sh env <dir>      # every run: export the paths
+#   scripts/ci/webkit-libs.sh use <dir>      # every run: point the linker at it
 #
 # A stale or broken cache can't pass silently: Playwright checks WebKit's
-# libraries with ldd (honouring LD_LIBRARY_PATH) before it launches.
+# libraries (ldd, and ldconfig -p for dlopened ones) before it launches.
 set -euo pipefail
 mode=$1
 dir=$2
@@ -23,8 +23,8 @@ case "$mode" in
     listed=$(bunx playwright install-deps --dry-run webkit | sed -n 's/^  \([^ ]*\)$/\1/p' || true)
     packages=()
     for package in $listed; do
-      # Skip upgrades of packages the image already has: a newer copy on
-      # LD_LIBRARY_PATH would shadow the system's (libc, say) for every process.
+      # Skip upgrades of packages the image already has: a newer copy in
+      # the linker cache would shadow the system's (libc, say) for every process.
       if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q 'install ok installed'; then
         packages+=("$package")
       fi
@@ -43,14 +43,18 @@ case "$mode" in
     done
     rm -rf "$debs"
     ;;
-  env)
-    libs="$dir/usr/lib/$arch_dir:$dir/lib/$arch_dir:$dir/usr/lib"
-    echo "LD_LIBRARY_PATH=$libs${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+  use)
+    # Register the folders with the linker cache rather than LD_LIBRARY_PATH:
+    # Playwright checks the libraries WebKit dlopens (libGLESv2, libx264) with
+    # `ldconfig -p`, which only sees the cache.
+    printf '%s\n' "$dir/usr/lib/$arch_dir" "$dir/lib/$arch_dir" "$dir/usr/lib" |
+      sudo tee /etc/ld.so.conf.d/zz-webkit-libs.conf > /dev/null
+    sudo ldconfig
     # GStreamer finds its plugins by directory, not through the linker.
     echo "GST_PLUGIN_SYSTEM_PATH_1_0=$dir/usr/lib/$arch_dir/gstreamer-1.0:/usr/lib/$arch_dir/gstreamer-1.0" >> "$GITHUB_ENV"
     ;;
   *)
-    echo "usage: $0 unpack|env <dir>" >&2
+    echo "usage: $0 unpack|use <dir>" >&2
     exit 2
     ;;
 esac

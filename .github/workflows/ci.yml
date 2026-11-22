@@ -101,7 +101,7 @@ jobs:
           key: ${{ steps.webkit-libs.outputs.cache-primary-key }}
       - name: Use WebKit's OS libraries
         if: matrix.browser == 'webkit'
-        run: scripts/ci/webkit-libs.sh env ~/webkit-libs
+        run: scripts/ci/webkit-libs.sh use ~/webkit-libs
       - name: Restore Next.js build cache
         id: next-cache
         uses: actions/cache/restore@v4
