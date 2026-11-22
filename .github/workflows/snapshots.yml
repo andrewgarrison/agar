@@ -1,9 +1,12 @@
-# Regenerates the Linux visual baselines and commits them to the branch.
-# Run it from the Actions tab on a PR branch after an intended visual change.
+# Regenerates the Linux visual baselines and commits them to the PR branch.
+# Trigger it by adding the `update-snapshots` label to a PR (or from the
+# Actions tab once this file is on main). The label is removed afterwards.
 name: Update visual snapshots
 
 on:
   workflow_dispatch:
+  pull_request:
+    types: [labeled]
 
 permissions:
   contents: write
@@ -11,9 +14,17 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/main'
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.event.label.name == 'update-snapshots' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
@@ -32,3 +43,8 @@ jobs:
           git add e2e/__snapshots__
           git diff --cached --quiet || git commit -m "test: update visual snapshots"
           git push
+      - name: Remove the label
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr edit ${{ github.event.pull_request.number }} --remove-label update-snapshots
