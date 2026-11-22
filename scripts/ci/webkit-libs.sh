@@ -47,11 +47,17 @@ case "$mode" in
     # Register the folders with the linker cache rather than LD_LIBRARY_PATH:
     # Playwright checks the libraries WebKit dlopens (libGLESv2, libx264) with
     # `ldconfig -p`, which only sees the cache.
-    printf '%s\n' "$dir/usr/lib/$arch_dir" "$dir/lib/$arch_dir" "$dir/usr/lib" |
+    printf '%s\n' "$dir/usr/lib/$arch_dir" "$dir/usr/lib/$arch_dir/pulseaudio" "$dir/lib/$arch_dir" "$dir/usr/lib" |
       sudo tee /etc/ld.so.conf.d/zz-webkit-libs.conf > /dev/null
     sudo ldconfig
-    # GStreamer finds its plugins by directory, not through the linker.
-    echo "GST_PLUGIN_SYSTEM_PATH_1_0=$dir/usr/lib/$arch_dir/gstreamer-1.0:/usr/lib/$arch_dir/gstreamer-1.0" >> "$GITHUB_ENV"
+    # These find their files by directory, not through the linker cache.
+    {
+      # GStreamer's plugins.
+      echo "GST_PLUGIN_SYSTEM_PATH_1_0=$dir/usr/lib/$arch_dir/gstreamer-1.0:/usr/lib/$arch_dir/gstreamer-1.0"
+      # Mesa's EGL vendor file. Without it WebKit can't create an EGL display,
+      # and every page hangs until the test times out.
+      echo "__EGL_VENDOR_LIBRARY_DIRS=$dir/usr/share/glvnd/egl_vendor.d:/usr/share/glvnd/egl_vendor.d"
+    } >> "$GITHUB_ENV"
     ;;
   *)
     echo "usage: $0 unpack|use <dir>" >&2
