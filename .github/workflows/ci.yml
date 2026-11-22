@@ -28,20 +28,22 @@ jobs:
           filter: blob:none
       - uses: ./.github/actions/setup
       # Each check runs even when an earlier one fails, so one run reports
-      # every failure. Checks that read the build skip when it fails.
+      # every failure. Workspace packages resolve each other through their
+      # built `dist` (package exports), so everything after the build reads
+      # it, and skips when the build fails.
       - name: Format
         if: ${{ !cancelled() }}
         run: bun run fmt:check
-      - name: Lint
-        if: ${{ !cancelled() }}
-        run: bun run lint
-      - name: Unit tests
-        if: ${{ !cancelled() }}
-        run: bun test
       - name: Build
         id: build
         if: ${{ !cancelled() }}
         run: bun run build
+      - name: Lint
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: bun run lint
+      - name: Unit tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: bun test
       # The docs app is type-checked against the built declarations, which is
       # what consumers get.
       - name: Types

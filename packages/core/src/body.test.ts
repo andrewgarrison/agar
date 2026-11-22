@@ -75,6 +75,15 @@ describe('placing a body', () => {
     expect(body.ready).toBe(false);
   });
 
+  it('stays awake until its first step, so it gets drawn', () => {
+    expect.assertions(3);
+    const body = placed();
+    expect(body.isAsleep()).toBe(false);
+    body.step(STEP);
+    expect(body.ready).toBe(true);
+    expect(body.isAsleep()).toBe(true);
+  });
+
   it('fills the rectangle it is placed on', () => {
     expect.assertions(1);
     const body = placed();

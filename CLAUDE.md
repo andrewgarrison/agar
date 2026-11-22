@@ -112,6 +112,15 @@ A Bun workspace (`workspaces` and `catalog` in the root package.json; Bun is pin
   - CSS ships as a side-effect import (`@agar/react/styles.css`, declared in `sideEffects`).
   - `@agar/react` **wraps** UI SDK in its own composable parts with its own prop types, rather than re-exporting UI SDK's parts. This keeps UI SDK's beta churn from reaching consumers.
   - `styles.css` declares `@layer ui-sdk, agar;`, so consumers don't need to add the `@layer ui-sdk;` line themselves. Their unlayered CSS beats both layers.
+- **Component template: Switch** (`packages/react/src/switch`). Copy its shape for every other component:
+  - One component per file (`Switch.tsx`, `SwitchThumb.tsx`), a `context.ts` when parts share refs, and the jelly binding as a hook (`use-switch-jelly.ts`). `index.ts` is the entry point, and the root barrel re-exports by name.
+  - Agar declares its own prop types. React's props allow an explicit `undefined`, and UI SDK's don't (`exactOptionalPropertyTypes`), so the props passed to a UI SDK part (`disabled`, `id`, `className`, `style` and the like) are redeclared without `| undefined`.
+  - The consumer's event handlers run first, then the jelly's. Compose them inside the binding hook, not inline in JSX.
+  - Shared React internals live in `src/internal` and are imported as `#internal/*` (package.json `imports`). Lint bans `../` imports. tsdown rewrites `#internal/*` to relative paths in `dist`.
+  - `internal/use-jelly.ts` gives a component one surface with one body, sized to its container. If no canvas can be made (jsdom, or no 2D context), it does nothing, so the CSS fallback stays.
+  - **Theme:** `data-theme="light"` or `"dark"` on `<html>`, or else the OS setting (`internal/theme.ts`). The CSS follows the same two things through `color-scheme` and `light-dark()`. There's no provider and no `theme` prop.
+  - Per-component CSS custom properties (`--agar-switch-track` and so on) stand in for tokens until the token set exists.
+  - New form controls go in the `controlComponents` list for `jsx-a11y/label-has-associated-control` in `.oxlintrc.json`.
 - `apps/docs`: a custom Next.js app for the docs and playground. The spike's lab page is a starting point.
 - Tooling (chosen):
   - **tsdown**: `unbundle` mode, so there's one output file per module and each keeps its `'use client'` banner.
@@ -128,6 +137,8 @@ A Bun workspace (`workspaces` and `catalog` in the root package.json; Bun is pin
   - `bun run verify` runs everything CI's check job runs.
   - `bun run e2e` runs the Playwright tests. Its server uses port 3100, so it never collides with a dev server on 3000.
 - E2E keyboard tests use `tab()` from `e2e/keyboard.ts`. WebKit follows Safari, where plain Tab skips buttons and links.
+- E2E jelly checks use `e2e/jelly.ts`: it reads the drawn jelly back from the surface's canvas (`trackJelly`, `settledJelly`), and `patchContexts` refuses WebGL or every canvas context and counts WebGL2 contexts. `e2e/switch.spec.ts` is the template.
+- `next dev` won't run twice from the same app folder, so stop any docs dev server before `bun run e2e` (its server is `next dev` on port 3100).
 - UI SDK coverage (checked at `0.1.0-beta.14`): it has every planned component except **Data table**, which needs its own headless layer (TanStack Table is the likely choice). It also has `calendar`, `date-picker`, `drawer`, `slider` and `segmented-control`.
 - Before publishing, create the `agar` npm org to claim the `@agar` scope. `@agar/ui` was unused on npm in Nov 2026, but the unscoped `agar` is taken. If the scope isn't available, fall back to `@agarrison/agar`.
 
@@ -139,7 +150,7 @@ Target: a PR gets its result in under 2 minutes. CI is the project's foundation,
 - Never check less. Lint rules and required checks only stay or grow.
 
 How CI is shaped (`.github/workflows/ci.yml`):
-- **`Checks` job:** format, lint, unit tests, build, then types, size and package exports against the build. One plain step per check, each running even when an earlier one fails, so one run reports every failure.
+- **`Checks` job:** format, build, then lint, unit tests, types, size and package exports against the build. Workspace packages resolve each other through their built `dist` (package exports), so anything that imports `@agar/core` needs the build first. One plain step per check, each running even when an earlier one fails (or skipping when the build fails), so one run reports every failure.
 - **`E2E + axe` jobs:** one per browser, each independent. No required job waits on another.
 - **Setup:**
   - `.github/actions/setup` makes a blobless clone and restores the pinned Bun and `node_modules` from caches keyed on `bun.lock`. Bun comes from npm, because the pinned canary only exists there as a versioned build.
@@ -159,11 +170,10 @@ The spike from agarrison.dev's `jelly-design-spike` branch (closed PR #9 there).
 | File | State | Notes |
 |---|---|---|
 | `body.ts`, `renderer.ts`, `stage.ts`, `palette.ts` | Done | Moved into `@agar/core` (Phase 1). The `.tsx` files below still import them by their old paths; read those imports as `@agar/core`. |
-| `useJelly.ts` | Rework | Imports the site's `useTheme` from `@/context/ThemeContext`. Replace it with an Agar theme provider, a `theme` prop, or `prefers-color-scheme` plus a `data-theme` attribute. |
-| `JellySwitch.tsx` | Spike quality | The behaviour is right. The API needs designing. |
+| `useJelly.ts`, `JellySwitch.tsx` | Done | Moved into `@agar/react` as `internal/use-jelly.ts` and `switch/` (Nov 2026). The files below that import `./useJelly` should use `#internal/use-jelly` instead. |
 | `JellyTabs.tsx` | Spike quality | Takes a `tabs` array. A real API should be composable parts like UI SDK's. |
 | `JellyPopover.tsx` | Spike quality | Same as above. Also has a hard-coded "Done" button. |
-| `jelly.css` | Spike quality | Uses the site's CSS variables (`--dock-bg`, `--accent-deep`, ...), which need replacing with Agar tokens. |
+| `jelly.css` | Spike quality | Uses the site's CSS variables (`--dock-bg`, `--accent-deep`, ...), which need replacing with Agar tokens. Its Switch styles have moved to `styles.css`. |
 | `JellyLab.example.tsx` | Reference | The `/lab` demo page, for the docs app. |
 | `audio/*.m4a` | Optional | The press-down and press-up sounds. |
 
@@ -181,8 +191,14 @@ Verified in Chromium on desktop:
 - Once settled, only bodies with `breathe > 0` keep drawing.
 - Frame cost for the dock was about 0.13 ms.
 
+Verified by e2e in Chromium, Firefox and WebKit (Switch, Nov 2026; macOS locally, Linux in CI):
+- Every surface on a page shares one WebGL2 context.
+- The jelly is drawn where UI SDK's thumb is, springs there on a toggle, tugs on press, and springs back when the pointer is released off the switch.
+- Under reduced motion it never overshoots.
+- Without WebGL, Canvas 2D draws it. With no canvas context at all, the CSS thumb shows and the switch still works.
+
 Not yet tested:
-- Touch devices, Safari and Firefox.
+- Touch devices.
 - Screen readers.
 - Many surfaces at once (for example 50 switches).
 - High-DPR performance. The device pixel ratio is capped at 2.

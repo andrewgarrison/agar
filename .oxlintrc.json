@@ -74,6 +74,8 @@
     "import/no-unassigned-import": ["error", { "allow": ["**/*.css", "@testing-library/jest-dom/vitest"] }],
     "vitest/consistent-test-filename": ["error", { "pattern": ".*\\.test\\.[tj]sx?$" }],
     "vitest/prefer-lowercase-title": ["error", { "ignoreTopLevelDescribe": true }],
+    // Agar's form controls render their own input, so a label around one is associated.
+    "jsx-a11y/label-has-associated-control": ["error", { "controlComponents": ["Switch"], "assert": "either" }],
 
     // Off: these contradict each other. We use named exports only (tree-shaking,
     // one name per thing), so `no-default-export` stays on.

@@ -18,7 +18,7 @@
   },
   "scripts": {
     "build": "bun --filter './packages/*' build",
-    "dev": "bun --filter './packages/*' --filter docs dev",
+    "dev": "bun run build && bun run --parallel --filter './packages/*' --filter docs dev",
     "docs:build": "bun --filter docs build",
     "lint": "bun lint --no-script --type-aware && biome lint .",
     "lint:fix": "bun lint --no-script --type-aware --fix && biome lint --write .",
@@ -27,7 +27,7 @@
     "e2e:update": "playwright test --update-snapshots",
     "size": "size-limit",
     "check:pkg": "bun --filter './packages/*' check:pkg",
-    "verify": "bun run fmt:check && bun run lint && bun run build && bun check && bun test && bun run size && bun run check:pkg",
+    "verify": "bun run fmt:check && bun run build && bun run lint && bun test && bun check && bun run size && bun run check:pkg",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "bun run build && bun scripts/publish.ts && changeset tag",

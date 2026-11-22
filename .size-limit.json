@@ -19,11 +19,30 @@
     "limit": "0.6 kB"
   },
   {
+    "name": "@agar/react/switch",
+    "path": "packages/react/dist/switch/index.js",
+    "import": "{ Switch }",
+    "ignore": ["react", "react-dom", "@ui-sdk/react", "@ui-sdk/core"],
+    "limit": "8.8 kB"
+  },
+  {
+    "name": "@agar/react/switch (without @agar/core)",
+    "path": "packages/react/dist/switch/index.js",
+    "import": "{ Switch }",
+    "ignore": ["react", "react-dom", "@ui-sdk/react", "@ui-sdk/core", "@agar/core"],
+    "limit": "1.7 kB"
+  },
+  {
     "name": "@agar/react/visually-hidden",
     "path": "packages/react/dist/visually-hidden/index.js",
     "import": "{ VisuallyHidden }",
     "ignore": ["react", "react-dom", "@ui-sdk/react", "@ui-sdk/core"],
     "limit": "1 kB"
   },
-  { "name": "@agar/react/styles.css", "path": "packages/react/dist/styles.css", "rolldown": false, "limit": "2 kB" }
+  {
+    "name": "@agar/react/styles.css",
+    "path": "packages/react/dist/styles.css",
+    "rolldown": false,
+    "limit": "2 kB"
+  }
 ]

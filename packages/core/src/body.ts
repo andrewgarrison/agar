@@ -139,10 +139,16 @@ export class JellyBody {
     this.pointer = point;
   }
 
-  /** True when nothing is moving and nothing will move on its own. */
+  /**
+   * True when nothing is moving and nothing will move on its own. A placed
+   * body stays awake until its first step, since it can't be drawn before then.
+   */
   public isAsleep(): boolean {
     if (this.home === null) {
       return true;
+    }
+    if (!this.ready) {
+      return false;
     }
     const idle = this.reducedMotion || this.params.breathe === 0;
     return (
