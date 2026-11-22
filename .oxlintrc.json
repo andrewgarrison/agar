@@ -109,7 +109,7 @@
   },
   "overrides": [
     {
-      "files": ["**/*.test.ts", "**/*.test.tsx", "e2e/**", "vitest.setup.ts"],
+      "files": ["**/*.test.ts", "**/*.test.tsx", "e2e/**", "test.setup.ts"],
       "rules": {
         "vitest/require-top-level-describe": "off",
         "eslint/no-magic-numbers": "off",

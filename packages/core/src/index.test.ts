@@ -1,12 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+// @vitest-environment node
+import { describe, expect, it, vi } from 'vitest';
 
 import { prefersReducedMotion } from './index';
 
 describe(prefersReducedMotion, () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
   it('is false without matchMedia (SSR)', () => {
     expect.assertions(1);
     vi.stubGlobal('matchMedia', undefined);

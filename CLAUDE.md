@@ -113,7 +113,7 @@ A Bun workspace (`workspaces` and `catalog` in the root package.json; Bun is pin
 - Tooling (chosen):
   - **tsdown**: `unbundle` mode, so there's one output file per module and each keeps its `'use client'` banner.
   - **Changesets** for releases. `.github/workflows/release.yml` opens a "Version packages" PR, and merging it publishes.
-  - **Vitest** with Testing Library: jsdom for `react`, node for `core`.
+  - **`bun test`** with Testing Library. Test files import from `vitest`, and Bun runs them natively (the Vitest package isn't installed). Types come from `bun-types/vitest`, and the canary `bun-types` is pinned. The `[test]` settings in `bunfig.toml` give jsdom by default, `isolate = "modules"`, random order, and a reset of every mock and stub after each test. Core test files start with `// @vitest-environment node`, so core stays DOM-free.
   - **Playwright** with axe, on Chromium, Firefox and WebKit. Visual baselines are Chromium-only and rendered on Linux. Regenerate them with the "Update visual snapshots" workflow, never from a Mac.
   - **size-limit**, `.size-limit.json`, with one entry per component entry point.
   - **publint** and **attw**, which check `bun run check:pkg` before publishing.
