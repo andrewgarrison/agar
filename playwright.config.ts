@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const CI = !!process.env.CI;
+const CI = Boolean(process.env.CI);
 // Not 3000, so e2e never collides with a dev server you already have open.
 const PORT = 3100;
 

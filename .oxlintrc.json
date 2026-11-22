@@ -1,0 +1,152 @@
+// Read by `bun lint`. Every category is on, at error. A rule is only turned off
+// below when it contradicts another rule or a project decision, or can't work
+// with React or TypeScript; each one says why. Rules only stay or grow: don't
+// turn one off without a measured reason in the PR.
+{
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "react",
+    "react-perf",
+    "jsx-a11y",
+    "import",
+    "oxc",
+    "promise",
+    "node",
+    "vitest",
+    "nextjs"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "perf": "error",
+    "style": "error",
+    "restriction": "error",
+    "nursery": "error"
+  },
+  "rules": {
+    // Bun's own rules aren't in the oxlint categories, so they are listed here.
+    "bun/axios-no-unbounded-requests": "error",
+    "bun/consistent-directive-prefix": "error",
+    "bun/fast-check-no-unseeded-random": "error",
+    "bun/jsx-no-forbidden-nesting": "error",
+    "bun/no-array-just-to-count": "error",
+    "bun/no-cast-to-brand": "error",
+    "bun/no-console-window-flash": "error",
+    "bun/no-cwd-dependent-path": "error",
+    "bun/no-eager-dynamic-import": "error",
+    "bun/no-eager-native-addon": "error",
+    "bun/no-env-at-module-scope": "error",
+    "bun/no-literal-temp-dir": "error",
+    "bun/no-negative-repeat-count": "error",
+    "bun/no-redundant-catch-type": "error",
+    "bun/no-restricted-text": "error",
+    "bun/no-side-effects-on-import": "error",
+    "bun/no-unhandled-emitter-errors": "error",
+    "bun/no-unportable-commands": "error",
+    "bun/no-useless-spread-fallback": "error",
+    "bun/prefer-builtin-sleep": "error",
+    "bun/prefer-local-module": "error",
+    "bun/prefer-timeout-signal": "error",
+    "bun/prefer-url-for-sibling-files": "error",
+    "bun/react-no-latest-value-ref": "error",
+    "bun/react-no-local-render-helpers": "error",
+    "bun/react-no-namespace-hooks": "error",
+    "bun/react-prefer-updater-function": "error",
+    "bun/zod-prefer-lazy-schema": "error",
+    // Configured, not off.
+    "eslint/capitalized-comments": ["error", "always", { "ignoreConsecutiveComments": true }],
+    "unicorn/no-useless-undefined": ["error", { "checkArguments": false }],
+    "eslint/no-duplicate-imports": ["error", { "allowSeparateTypeImports": true }],
+    "vitest/valid-title": ["error", { "ignoreTypeOfDescribeName": true }],
+    "eslint/func-style": ["error", "declaration", { "allowArrowFunctions": true }],
+    "eslint/one-var": ["error", "never"],
+    "eslint/id-length": ["error", { "min": 2, "exceptions": ["_", "i", "j", "x", "y", "t"] }],
+    "eslint/no-magic-numbers": [
+      "error",
+      { "ignore": [-1, 0, 1, 2], "ignoreArrayIndexes": true, "ignoreDefaultValues": true }
+    ],
+    "react/jsx-filename-extension": ["error", { "extensions": [".tsx"] }],
+    "react/jsx-max-depth": ["error", { "max": 5 }],
+    "unicorn/filename-case": ["error", { "cases": { "kebabCase": true, "pascalCase": true } }],
+    "import/no-unassigned-import": ["error", { "allow": ["**/*.css", "@testing-library/jest-dom/vitest"] }],
+    "vitest/consistent-test-filename": ["error", { "pattern": ".*\\.test\\.[tj]sx?$" }],
+    "vitest/prefer-lowercase-title": ["error", { "ignoreTopLevelDescribe": true }],
+
+    // Off: these contradict each other. We use named exports only (tree-shaking,
+    // one name per thing), so `no-default-export` stays on.
+    "import/no-named-export": "off",
+    "import/prefer-default-export": "off",
+    "import/group-exports": "off",
+    "import/exports-last": "off",
+
+    // Off: they ban ES2018-2020 syntax for old runtimes. We target ES2022.
+    "oxc/no-async-await": "off",
+    "oxc/no-optional-chaining": "off",
+    "oxc/no-rest-spread-properties": "off",
+
+    // Off: wrong for our stack.
+    "react/react-in-jsx-scope": "off", // The react-jsx transform needs no React import.
+    "eslint/no-undef": "off", // TypeScript checks undefined names, with types.
+    "unicorn/no-null": "off", // React's API is built on null: refs, rendering nothing.
+    "eslint/no-undefined": "off", // exactOptionalPropertyTypes needs an explicit undefined.
+    "react/jsx-props-no-spreading": "off", // Wrapping UI SDK parts means forwarding their props.
+    "react/forbid-component-props": "off", // className and style are part of every component's API.
+    "typescript/prefer-readonly-parameter-types": "off", // React and DOM types aren't deeply readonly, so no prop type can pass.
+    "eslint/no-ternary": "off", // Bans the only expression-level conditional, which JSX needs.
+    "eslint/sort-keys": "off", // Objects group keys by meaning (physics params, build config).
+    "eslint/sort-imports": "off", // `bun fmt --sort-imports` sorts imports; this rule would fight it.
+    "bun/format": "off", // `bun fmt --check` reports formatting; this would report it twice.
+
+    // Off: they contradict the test rules in the CI brief.
+    "vitest/no-importing-vitest-globals": "off", // Test files keep their vitest imports.
+    "vitest/require-test-timeout": "off", // Per-test timeouts invite wider timeouts; one global timeout instead.
+    "vitest/no-hooks": "off", // State is reset after every file, which needs hooks.
+    "vitest/prefer-to-be-truthy": "off", // Suggests toBeTruthy over toBe(true): a weaker check.
+    "vitest/prefer-to-be-falsy": "off" // Same, for toBeFalsy.
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx", "e2e/**", "vitest.setup.ts"],
+      "rules": {
+        "vitest/require-top-level-describe": "off",
+        "eslint/no-magic-numbers": "off",
+        "react/jsx-no-literals": "off",
+        "eslint/max-lines-per-function": "off"
+      }
+    },
+    {
+      // Next.js requires default exports for pages, layouts and its config.
+      "files": ["apps/docs/app/**", "apps/docs/next.config.ts"],
+      "rules": {
+        "import/no-default-export": "off",
+        "react/jsx-no-literals": "off",
+        "react/only-export-components": "off"
+      }
+    },
+    {
+      // Tool configs are default exports read by the tool, and may read CI env.
+      "files": ["*.config.ts", "packages/*/tsdown.config.ts"],
+      "rules": { "import/no-default-export": "off", "node/no-process-env": "off", "bun/no-env-at-module-scope": "off" }
+    },
+    {
+      // Playwright specs are *.spec.ts so they never mix with unit tests.
+      "files": ["e2e/**"],
+      "rules": { "vitest/consistent-test-filename": ["error", { "pattern": ".*\\.spec\\.ts$" }] }
+    },
+    {
+      // Release scripts are CLIs: they print, run top to bottom when started,
+      // and publish one package at a time on purpose.
+      "files": ["scripts/**"],
+      "rules": {
+        "eslint/no-console": "off",
+        "bun/no-side-effects-on-import": "off",
+        "node/no-top-level-await": "off",
+        "eslint/no-await-in-loop": "off"
+      }
+    }
+  ],
+  "ignorePatterns": ["seed/**", "**/dist/**", "**/.next/**", "e2e/__snapshots__/**", "**/next-env.d.ts"]
+}
