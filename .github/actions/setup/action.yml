@@ -1,15 +1,51 @@
 name: Setup
-description: Install the pinned Bun (from package.json's packageManager) and the workspace's dependencies.
+description: >-
+  Install the pinned Bun and the workspace's dependencies from cache. Caches
+  are keyed on the Bun version and bun.lock, so a PR that doesn't change the
+  lockfile restores what main saved and runs no install at all.
 
 runs:
   using: composite
   steps:
+    - name: Read the pinned Bun version
+      id: bun
+      shell: bash
+      run: echo "version=$(node -p "require('./package.json').packageManager.replace(/^bun@/, '')")" >> "$GITHUB_OUTPUT"
+
+    - name: Restore Bun
+      id: bun-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.bun-ci
+        key: bun-${{ runner.os }}-${{ runner.arch }}-${{ steps.bun.outputs.version }}
+
     - name: Install Bun
+      if: steps.bun-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: npm install --prefix ~/.bun-ci --no-audit --no-fund --no-save "bun@${{ steps.bun.outputs.version }}"
+
+    - name: Put Bun on PATH
       shell: bash
       run: |
-        version=$(jq -r '.packageManager | sub("^bun@"; "")' package.json)
-        npm install --global --no-audit --no-fund "bun@${version}"
-        bun --revision
+        echo "$HOME/.bun-ci/node_modules/.bin" >> "$GITHUB_PATH"
+        "$HOME/.bun-ci/node_modules/.bin/bun" --revision
+
+    - name: Restore node_modules
+      id: deps-cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          node_modules
+          packages/*/node_modules
+          apps/*/node_modules
+        key: deps-${{ runner.os }}-${{ runner.arch }}-bun${{ steps.bun.outputs.version }}-${{ hashFiles('bun.lock') }}
+
     - name: Install dependencies
+      if: steps.deps-cache.outputs.cache-hit != 'true'
       shell: bash
       run: bun install --frozen-lockfile
+
+    - name: Report cache hits
+      shell: bash
+      run: |
+        echo "cache bun=${{ steps.bun-cache.outputs.cache-hit == 'true' && 'hit' || 'miss' }} deps=${{ steps.deps-cache.outputs.cache-hit == 'true' && 'hit' || 'miss' }}"

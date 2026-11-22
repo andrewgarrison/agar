@@ -1,45 +1,86 @@
 name: CI
 
+# Every PR runs the full suite: there's no merge queue, so this is the check
+# that guards main. Budgets (scripts/ci/budget.sh, scripts/ci/checks.ts) fail a
+# job that gets slow; find the cause instead of raising them.
 on:
   pull_request:
   push:
     branches: [main]
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # A new commit on a PR cancels that PR's run in progress. Runs on main are
+  # never cancelled: they seed the caches PRs restore.
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
+  actions: read # scripts/ci/budget.sh reads the job's start time
 
 jobs:
-  check:
-    name: Lint, build, test, size
+  checks:
+    name: Checks (format, lint, types, unit, build, size, package)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
+      - name: Record job start
+        run: echo "CI_JOB_START=$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v5
+        with:
+          filter: blob:none
       - uses: ./.github/actions/setup
-      - run: bun run fmt:check
-      - run: bun run lint
-      - run: bun run build
-      - run: bun check
-      - run: bun test
-      - run: bun run size
-      - run: bun run check:pkg
+      - name: 'Budget: setup'
+        run: scripts/ci/budget.sh setup 15
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Checks
+        run: bun scripts/ci/checks.ts
+      - name: 'Budget: job'
+        if: always()
+        run: scripts/ci/budget.sh job 35
+        env:
+          GH_TOKEN: ${{ github.token }}
 
   e2e:
-    name: E2E, axe, visual (${{ matrix.browser }})
+    name: E2E + axe (${{ matrix.browser }})
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Browsers and their OS libraries come baked into Playwright's image, so
+    # there's no `playwright install --with-deps` on every run. Keep the tag
+    # equal to @playwright/test in package.json.
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
     strategy:
       fail-fast: false
       matrix:
         browser: [chromium, firefox, webkit]
     steps:
+      - name: Record job start
+        run: echo "CI_JOB_START=$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v5
+        with:
+          filter: blob:none
       - uses: ./.github/actions/setup
-      - run: bunx playwright install --with-deps ${{ matrix.browser }}
-      - run: bun run build && bun run docs:build
-      - run: bun run e2e --project=${{ matrix.browser }}
+      - name: Restore Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: apps/docs/.next/cache
+          key: next-${{ hashFiles('bun.lock') }}-${{ hashFiles('apps/docs/**', 'packages/*/src/**') }}
+          restore-keys: next-${{ hashFiles('bun.lock') }}-
+      - name: 'Budget: setup'
+        run: scripts/ci/budget.sh setup 15
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Build
+        run: bun run build && bun run docs:build
+      - name: Playwright
+        run: bun run e2e --project=${{ matrix.browser }}
+      - name: 'Budget: job'
+        if: always()
+        run: scripts/ci/budget.sh job 35
+        env:
+          GH_TOKEN: ${{ github.token }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

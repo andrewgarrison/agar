@@ -142,6 +142,8 @@
       "files": ["scripts/**"],
       "rules": {
         "eslint/no-console": "off",
+        "node/no-process-env": "off", // CI scripts read CI's environment.
+        "vitest/require-hook": "off", // Not a test file: top-level code is the script.
         "bun/no-side-effects-on-import": "off",
         "node/no-top-level-await": "off",
         "eslint/no-await-in-loop": "off"
