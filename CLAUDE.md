@@ -128,6 +128,25 @@ A Bun workspace (`workspaces` and `catalog` in the root package.json; Bun is pin
 - UI SDK coverage (checked at `0.1.0-beta.14`): it has every planned component except **Data table**, which needs its own headless layer (TanStack Table is the likely choice). It also has `calendar`, `date-picker`, `drawer`, `slider` and `segmented-control`.
 - Before publishing, create the `agar` npm org to claim the `@agar` scope. `@agar/ui` was unused on npm in Nov 2026, but the unscoped `agar` is taken. If the scope isn't available, fall back to `@agarrison/agar`.
 
+## CI
+
+Target: a PR gets its result in under 1 minute at p50 and under 2 minutes at p95. Three rules outrank speed:
+- The full suite runs on every PR. There's no merge queue (decided Nov 2026), so the PR run is what guards `main`. Diff-based test selection would let untested code reach `main`, so CI doesn't select.
+- Never hide a failure. No retries (Playwright's `retries` is 0), no wider timeouts, no skipped tests. A check that needs a retry has a bug: find it.
+- Never check less. Lint rules and required checks only stay or grow.
+
+How CI is shaped (`.github/workflows/ci.yml`):
+- **`Checks` job:** `scripts/ci/checks.ts` runs fmt, lint, test and build in parallel. Then types, size and package checks run against the build. It reports every failure, and fails any check over its budget.
+- **`E2E + axe` jobs:** one per browser, each independent. No required job waits on another.
+- **Setup:**
+  - `.github/actions/setup` makes a blobless clone and restores the pinned Bun and `node_modules` from caches keyed on `bun.lock`.
+  - Caches are saved right after they're built, not at the end of the job, so a failing job still warms them. PRs restore what `main` saved.
+- **Budgets:** setup 15 s and job 35 s, counted from when GitHub *started* the job (`scripts/ci/budget.sh`).
+- **Cancellation:** a new commit cancels a PR's run. Runs on `main` are never cancelled.
+- **Audit:** `bun scripts/ci/audit.ts [--branch b] [--runs n]` splits real runs into waiting, setup and running at p50 and p95. Fix the biggest bucket first.
+- **Known gap:** the WebKit job installs its OS libraries with `apt` on every run (about 37 s), so it is over budget on hosted runners. The fix is a runner image with the toolchain baked in (Blacksmith or GitHub custom images). Don't raise the budget.
+- **Revisit later:** test sharding and per-file timings. With a few tests running in well under a second, one shard is fastest. Buy cores before shards.
+
 ## Starting code (`seed/`)
 
 The spike from agarrison.dev's `jelly-design-spike` branch (closed PR #9 there). `seed/` is reference material: move code out of it into the packages as it's extracted, and delete the folder once it's empty. Don't import from it, and keep it out of builds, lint and tests.
