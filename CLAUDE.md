@@ -150,7 +150,7 @@ Target: a PR gets its result in under 2 minutes. CI is the project's foundation,
 - Never check less. Lint rules and required checks only stay or grow.
 
 How CI is shaped (`.github/workflows/ci.yml`):
-- **`Checks` job:** format, lint, unit tests, build, then types, size and package exports against the build. One plain step per check, each running even when an earlier one fails, so one run reports every failure.
+- **`Checks` job:** format, build, then lint, unit tests, types, size and package exports against the build. Workspace packages resolve each other through their built `dist` (package exports), so anything that imports `@agar/core` needs the build first. One plain step per check, each running even when an earlier one fails (or skipping when the build fails), so one run reports every failure.
 - **`E2E + axe` jobs:** one per browser, each independent. No required job waits on another.
 - **Setup:**
   - `.github/actions/setup` makes a blobless clone and restores the pinned Bun and `node_modules` from caches keyed on `bun.lock`. Bun comes from npm, because the pinned canary only exists there as a versioned build.
