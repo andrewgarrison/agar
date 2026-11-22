@@ -6,7 +6,7 @@
  *   bun scripts/ci/audit.ts --runs 50 --branch main
  *
  * - waiting: job created -> job started (queueing for a runner)
- * - setup:   job started -> end of the last setup step (clone, toolchain, caches)
+ * - setup:   job started -> start of the first work step (clone, toolchain, caches)
  * - running: the rest of the job
  * - result:  run created -> last job finished (what a PR author waits for)
  */
@@ -33,8 +33,8 @@ interface Run {
   conclusion: string | null;
 }
 
-const SETUP_STEP =
-  /^(?:Set up job|Initialize containers|Record job start|Run actions\/checkout|Run \.\/\.github\/actions\/setup|Read the Playwright version|Install browsers|Install WebKit|Run bunx playwright install|Restore|Unpack|Save|Use WebKit|Budget: setup)/u;
+// Setup is everything before the first step that does the job's real work.
+const WORK_STEP = /^(?:Format|Lint|Unit tests|Build|Types|Size|Package exports|Playwright)$/u;
 const DEFAULT_RUNS = 150;
 const PER_PAGE = 100;
 const MS_PER_SECOND = 1000;
@@ -113,7 +113,7 @@ for (const run of runs) {
     const steps = job.steps ?? [];
     let setupEnd = job.started_at;
     for (const step of steps) {
-      if (!SETUP_STEP.test(step.name) || step.completed_at === null) {
+      if (WORK_STEP.test(step.name) || step.completed_at === null) {
         break;
       }
       setupEnd = step.completed_at;

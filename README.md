@@ -20,7 +20,7 @@ bun run e2e      # Playwright + axe in Chromium, Firefox and WebKit
 
 Changes to published packages need a changeset (`bun changeset`).
 
-Git hooks run through [hk](https://hk.jdx.dev) (`brew install hk`). `bun install` installs them. Pre-commit formats and lints the staged files. Pre-push runs the same checks as CI (`bun scripts/ci/checks.ts`), in about 2 s.
+Git hooks run through [hk](https://hk.jdx.dev) (`brew install hk`). `bun install` installs them. Pre-commit formats and lints the staged files. Pre-push runs the same checks as CI's Checks job (`bun run verify`), in a few seconds.
 
 ## License
 
