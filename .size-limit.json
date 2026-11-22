@@ -30,7 +30,7 @@
     "path": "packages/react/dist/switch/index.js",
     "import": "{ Switch }",
     "ignore": ["react", "react-dom", "@ui-sdk/react", "@ui-sdk/core", "@agar/core"],
-    "limit": "1.7 kB"
+    "limit": "1.9 kB"
   },
   {
     "name": "@agar/react/visually-hidden",

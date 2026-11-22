@@ -62,6 +62,7 @@ export function Switch({
   className,
   ref,
   onPointerDown,
+  onPointerMove,
   onPointerUp,
   onPointerLeave,
   onPointerCancel,
@@ -71,7 +72,7 @@ export function Switch({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const thumbRef = useRef<HTMLSpanElement>(null);
   const refs = useMemo(() => ({ root: rootRef, canvas: canvasRef, thumb: thumbRef }), []);
-  const handlers = useSwitchJelly(refs, { onPointerDown, onPointerUp, onPointerLeave, onPointerCancel });
+  const handlers = useSwitchJelly(refs, { onPointerDown, onPointerMove, onPointerUp, onPointerLeave, onPointerCancel });
   return (
     <ThumbContext value={thumbRef}>
       <SwitchRoot

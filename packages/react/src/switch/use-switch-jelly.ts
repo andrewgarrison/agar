@@ -18,6 +18,21 @@ const THUMB_PARAMS: Partial<JellyParams> = {
   pressReach: 0.4,
   maxStretch: 1.9,
   pokeWiden: 2,
+  // A little bouncier than the spike: the edges carry some momentum into the
+  // soft wall at the end of the track, so the body squashes into it and
+  // settles in about 630 ms (the spike: 425 ms).
+  wallZ: 0.6,
+  leadZ: 0.55,
+  trailZ: 0.55,
+  settleZ: 0.5,
+  vertZ: 0.47,
+  inertia: 0.075,
+  slosh: 0.058,
+  // About half the dock's hover (3 px within 46 px), sized to the 24 px thumb:
+  // the near side leans toward the mouse by under a pixel, and the whole
+  // thumb barely slides.
+  hoverReach: 2,
+  hoverRadius: 34,
 };
 
 export interface SwitchJellyRefs {
@@ -31,12 +46,13 @@ type PointerHandler = ((event: PointerEvent<HTMLButtonElement>) => void) | undef
 /** The consumer's own pointer handlers, which run before the jelly's. */
 export interface PointerHandlers {
   readonly onPointerDown?: PointerHandler;
+  readonly onPointerMove?: PointerHandler;
   readonly onPointerUp?: PointerHandler;
   readonly onPointerLeave?: PointerHandler;
   readonly onPointerCancel?: PointerHandler;
 }
 
-/** The same handlers, with the jelly's press and release added. */
+/** The same handlers, with the jelly's hover, press and release added. */
 export type ComposedHandlers = {
   readonly [Key in keyof PointerHandlers]-?: (event: PointerEvent<HTMLButtonElement>) => void;
 };
@@ -79,6 +95,10 @@ function useFollowChecked(
   }, [refs, jellyRef, pressedRef]);
 }
 
+function isDisabled(root: HTMLElement): boolean {
+  return root.dataset.disabled !== undefined;
+}
+
 // Pressing tugs the thumb toward the other end.
 function pressDown(
   jellyRef: RefObject<Jelly | null>,
@@ -87,7 +107,7 @@ function pressDown(
 ): boolean {
   const jelly = jellyRef.current;
   const root = event.currentTarget;
-  if (jelly === null || thumb === null || event.button !== MAIN_BUTTON || root.dataset.disabled !== undefined) {
+  if (jelly === null || thumb === null || event.button !== MAIN_BUTTON || isDisabled(root)) {
     return false;
   }
   jelly.body.pressToward(mirrored(rectOf(thumb), root.clientWidth));
@@ -112,6 +132,25 @@ function letGo(jellyRef: RefObject<Jelly | null>, pressedRef: RefObject<boolean>
   }, 0);
 }
 
+// The surface leans toward a nearby mouse, as the dock's jelly does. Touch and
+// pen have no hover, and a disabled switch doesn't respond.
+function hover(jellyRef: RefObject<Jelly | null>, event: PointerEvent<HTMLButtonElement>): void {
+  const jelly = jellyRef.current;
+  const root = event.currentTarget;
+  if (jelly === null || event.pointerType !== 'mouse' || isDisabled(root)) {
+    return;
+  }
+  const box = root.getBoundingClientRect();
+  // The body measures from the padding box, inside the border.
+  jelly.body.setPointer({ x: event.clientX - box.left - root.clientLeft, y: event.clientY - box.top - root.clientTop });
+  jelly.surface.wake();
+}
+
+function unhover(jellyRef: RefObject<Jelly | null>): void {
+  jellyRef.current?.body.setPointer(null);
+  jellyRef.current?.surface.wake();
+}
+
 interface PressOptions {
   readonly handlers: PointerHandlers;
   readonly thumbRef: RefObject<HTMLSpanElement | null>;
@@ -131,8 +170,15 @@ function usePress({ handlers, thumbRef, jellyRef, pressedRef }: PressOptions): C
       handlers.onPointerDown?.(event);
       pressedRef.current = pressDown(jellyRef, thumbRef.current, event);
     },
+    onPointerMove: (event) => {
+      handlers.onPointerMove?.(event);
+      hover(jellyRef, event);
+    },
     onPointerUp: release(handlers.onPointerUp),
-    onPointerLeave: release(handlers.onPointerLeave),
+    onPointerLeave: (event) => {
+      release(handlers.onPointerLeave)(event);
+      unhover(jellyRef);
+    },
     onPointerCancel: release(handlers.onPointerCancel),
   };
 }
