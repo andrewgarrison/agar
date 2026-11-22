@@ -18,18 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm build
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm size
-      - run: pnpm check:pkg
+      - uses: ./.github/actions/setup
+      - run: bun run lint
+      - run: bun run build
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun run size
+      - run: bun run check:pkg
 
   e2e:
     name: E2E, axe, visual (${{ matrix.browser }})
@@ -40,15 +35,10 @@ jobs:
         browser: [chromium, firefox, webkit]
     steps:
       - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
-      - run: pnpm build && pnpm docs:build
-      - run: pnpm e2e --project=${{ matrix.browser }}
+      - uses: ./.github/actions/setup
+      - run: bunx playwright install --with-deps ${{ matrix.browser }}
+      - run: bun run build && bun run docs:build
+      - run: bun run e2e --project=${{ matrix.browser }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

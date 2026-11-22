@@ -1,0 +1,3 @@
+[install]
+# Pin exact versions on `bun add`, as .npmrc's save-exact did under pnpm.
+exact = true

@@ -1,0 +1,15 @@
+name: Setup
+description: Install the pinned Bun (from package.json's packageManager) and the workspace's dependencies.
+
+runs:
+  using: composite
+  steps:
+    - name: Install Bun
+      shell: bash
+      run: |
+        version=$(jq -r '.packageManager | sub("^bun@"; "")' package.json)
+        npm install --global --no-audit --no-fund "bun@${version}"
+        bun --revision
+    - name: Install dependencies
+      shell: bash
+      run: bun install --frozen-lockfile

@@ -96,7 +96,7 @@ Rule of thumb: when deciding *what* happens, ask UI SDK. When deciding *how it l
 
 ## Package layout (decided; scaffolded in Phase 0)
 
-A pnpm workspace:
+A Bun workspace (`workspaces` and `catalog` in the root package.json; Bun is pinned to an exact canary in `packageManager`):
 
 - `packages/core` → `@agar/core`
   - The jelly engine (`body`, `renderer`, `stage`, palettes) and tokens.
@@ -116,12 +116,12 @@ A pnpm workspace:
   - **Vitest** with Testing Library: jsdom for `react`, node for `core`.
   - **Playwright** with axe, on Chromium, Firefox and WebKit. Visual baselines are Chromium-only and rendered on Linux. Regenerate them with the "Update visual snapshots" workflow, never from a Mac.
   - **size-limit**, `.size-limit.json`, with one entry per component entry point.
-  - **publint** and **attw**, which check `pnpm check:pkg` before publishing.
+  - **publint** and **attw**, which check `bun run check:pkg` before publishing.
   - **Biome** for lint and format. It skips `seed/` and Markdown, because Biome would reformat this brief.
   - TypeScript 7 with `isolatedDeclarations` in the packages, so exported functions need explicit return types.
 - Commands:
-  - `pnpm verify` runs everything CI's check job runs. It isn't called `pnpm ci` because that name is reserved by pnpm.
-  - `pnpm e2e` runs the Playwright tests. Its server uses port 3100, so it never collides with a dev server on 3000.
+  - `bun run verify` runs everything CI's check job runs.
+  - `bun run e2e` runs the Playwright tests. Its server uses port 3100, so it never collides with a dev server on 3000.
 - E2E keyboard tests use `tab()` from `e2e/keyboard.ts`. WebKit follows Safari, where plain Tab skips buttons and links.
 - UI SDK coverage (checked at `0.1.0-beta.14`): it has every planned component except **Data table**, which needs its own headless layer (TanStack Table is the likely choice). It also has `calendar`, `date-picker`, `drawer`, `slider` and `segmented-control`.
 - Before publishing, create the `agar` npm org to claim the `@agar` scope. `@agar/ui` was unused on npm in Nov 2026, but the unscoped `agar` is taken. If the scope isn't available, fall back to `@agarrison/agar`.
