@@ -2,7 +2,9 @@ name: Setup
 description: >-
   Install the pinned Bun and the workspace's dependencies from cache. Caches
   are keyed on the Bun version and bun.lock, so a PR that doesn't change the
-  lockfile restores what main saved and runs no install at all.
+  lockfile restores what main saved and runs no install at all. Caches are
+  saved as soon as they're built (not at the end of a successful job), so a
+  job that fails later still leaves a warm cache behind.
 
 runs:
   using: composite
@@ -14,7 +16,7 @@ runs:
 
     - name: Restore Bun
       id: bun-cache
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
       with:
         path: ~/.bun-ci
         # Bump the v<n> prefix when the cached layout changes.
@@ -29,6 +31,13 @@ runs:
           npm install --prefix ~/.bun-ci --no-audit --no-fund --no-save "bun@${{ steps.bun.outputs.version }}"
         fi
 
+    - name: Save Bun
+      if: steps.bun-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: ~/.bun-ci
+        key: ${{ steps.bun-cache.outputs.cache-primary-key }}
+
     - name: Put Bun on PATH
       shell: bash
       run: |
@@ -37,7 +46,7 @@ runs:
 
     - name: Restore node_modules
       id: deps-cache
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
       with:
         path: |
           node_modules
@@ -49,6 +58,16 @@ runs:
       if: steps.deps-cache.outputs.cache-hit != 'true'
       shell: bash
       run: bun install --frozen-lockfile
+
+    - name: Save node_modules
+      if: steps.deps-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          node_modules
+          packages/*/node_modules
+          apps/*/node_modules
+        key: ${{ steps.deps-cache.outputs.cache-primary-key }}
 
     - name: Report cache hits
       shell: bash

@@ -65,20 +65,27 @@ jobs:
         run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
       - name: Restore ${{ matrix.browser }}
         id: browser-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
       - name: Install browsers
         if: steps.browser-cache.outputs.cache-hit != 'true'
         run: bunx playwright install ${{ matrix.browser }}
+      - name: Save ${{ matrix.browser }}
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.browser-cache.outputs.cache-primary-key }}
       # The hosted image already has Chromium's and Firefox's OS libraries;
       # WebKit's (GStreamer and friends) have to be installed every run.
       - name: Install WebKit's OS libraries
         if: matrix.browser == 'webkit'
         run: sudo env "PATH=$PATH" bunx playwright install-deps webkit
       - name: Restore Next.js build cache
-        uses: actions/cache@v4
+        id: next-cache
+        uses: actions/cache/restore@v4
         with:
           path: apps/docs/.next/cache
           key: next-${{ hashFiles('bun.lock') }}-${{ hashFiles('apps/docs/**', 'packages/*/src/**') }}
@@ -89,6 +96,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
       - name: Build
         run: bun run build && bun run docs:build
+      - name: Save Next.js build cache
+        if: steps.next-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: apps/docs/.next/cache
+          key: ${{ steps.next-cache.outputs.cache-primary-key }}
       - name: Playwright
         run: bun run e2e --project=${{ matrix.browser }}
       - name: 'Budget: job'
