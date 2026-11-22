@@ -284,4 +284,172 @@
       display: none;
     }
   }
+
+  /* === Popover === */
+  .agar-popover-trigger,
+  .agar-popover {
+    --agar-popover-focus: light-dark(#0369a1, #8db4ff);
+  }
+
+  .agar-popover-trigger {
+    --agar-popover-trigger: light-dark(rgb(100 115 135 / 0.12), rgb(255 255 255 / 0.08));
+    --agar-popover-trigger-hover: light-dark(rgb(100 115 135 / 0.2), rgb(255 255 255 / 0.14));
+    --agar-popover-trigger-edge: light-dark(rgb(100 115 135 / 0.5), rgb(255 255 255 / 0.3));
+    --agar-popover-trigger-text: light-dark(#0b1b2b, #fff);
+
+    height: 40px;
+    margin: 0;
+    padding: 0 18px;
+    border: 1px solid var(--agar-popover-trigger-edge);
+    border-radius: 9999px;
+    background: var(--agar-popover-trigger);
+    color: var(--agar-popover-trigger-text);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .agar-popover-trigger:hover,
+  .agar-popover-trigger[data-open] {
+    background: var(--agar-popover-trigger-hover);
+  }
+
+  .agar-popover-trigger:focus-visible,
+  .agar-popover-close:focus-visible {
+    outline: 2px solid var(--agar-popover-focus);
+    outline-offset: 2px;
+  }
+
+  .agar-popover-trigger[data-disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* The panel. The jelly draws its glass; until it's ready, and whenever it
+     can't draw, a plain frosted panel shows instead. Text on either keeps
+     4.5:1 over a plain page. */
+  .agar-popover {
+    --agar-popover-width: 18rem;
+    --agar-popover-radius: 20px;
+    --agar-popover-panel: light-dark(rgb(224 234 244 / 0.96), rgb(14 20 34 / 0.94));
+    --agar-popover-edge: light-dark(rgb(100 115 135 / 0.35), rgb(255 255 255 / 0.18));
+    --agar-popover-text: light-dark(#0b1b2b, #fff);
+    --agar-popover-muted: light-dark(#1e3448, rgb(255 255 255 / 0.82));
+    --agar-popover-close: light-dark(rgb(255 255 255 / 0.55), rgb(255 255 255 / 0.12));
+    --agar-popover-close-hover: light-dark(rgb(255 255 255 / 0.8), rgb(255 255 255 / 0.2));
+    --agar-popover-close-edge: light-dark(rgb(11 27 43 / 0.35), rgb(255 255 255 / 0.3));
+
+    box-sizing: border-box;
+    width: var(--agar-popover-width);
+    max-width: calc(100vw - 32px);
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    border-radius: var(--agar-popover-radius);
+    background: transparent;
+    color: var(--agar-popover-text);
+  }
+
+  .agar-popover:not([data-jelly='ready']) {
+    border: 1px solid var(--agar-popover-edge);
+    background: var(--agar-popover-panel);
+    backdrop-filter: blur(16px);
+  }
+
+  .agar-popover:focus-visible {
+    outline: 2px solid var(--agar-popover-focus);
+    outline-offset: 2px;
+  }
+
+  /* UI SDK keeps closing content on the page while a transition runs. This
+     one changes nothing you can see until the jelly has shrunk back into the
+     trigger, and it covers every way of closing, controlled ones included. */
+  .agar-popover[data-jelly='ready'][data-ending-style] {
+    visibility: hidden;
+    transition: visibility 0s linear 360ms;
+  }
+
+  .agar-popover-body {
+    position: relative;
+    z-index: 1;
+    padding: 18px 20px;
+    transition:
+      opacity 180ms ease 60ms,
+      translate 220ms ease 40ms;
+  }
+
+  .agar-popover[data-starting-style] .agar-popover-body {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+
+  .agar-popover[data-ending-style] .agar-popover-body {
+    opacity: 0;
+    transition-delay: 0ms;
+    transition-duration: 120ms;
+  }
+
+  .agar-popover-title {
+    margin: 0 0 4px;
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .agar-popover-description {
+    margin: 0;
+    color: var(--agar-popover-muted);
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .agar-popover-close {
+    height: 32px;
+    margin: 12px 0 0;
+    padding: 0 14px;
+    border: 1px solid var(--agar-popover-close-edge);
+    border-radius: 9999px;
+    background: var(--agar-popover-close);
+    color: inherit;
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .agar-popover-close:hover {
+    background: var(--agar-popover-close-hover);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .agar-popover-body {
+      transition: none;
+    }
+
+    /* The jelly vanishes at once, so there's nothing to wait for. */
+    .agar-popover[data-jelly='ready'][data-ending-style] {
+      transition: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .agar-popover-trigger,
+    .agar-popover-close {
+      border-color: ButtonText;
+    }
+
+    /* The jelly is drawn in fixed colours, so show a system-coloured panel. */
+    .agar-popover,
+    .agar-popover[data-jelly='ready'] {
+      border: 1px solid CanvasText;
+      background: Canvas;
+    }
+
+    .agar-popover .agar-jelly-canvas {
+      display: none;
+    }
+  }
 }

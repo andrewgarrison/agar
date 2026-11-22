@@ -51,3 +51,20 @@ td {
   cursor: pointer;
   user-select: none;
 }
+
+.popover-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.popover-form input {
+  padding: 0.375rem 0.5rem;
+  border: 1px solid light-dark(#6b7684, #8a94a3);
+  border-radius: 0.5rem;
+  background: light-dark(rgb(255 255 255 / 0.8), rgb(0 0 0 / 0.3));
+  color: inherit;
+  font: inherit;
+}

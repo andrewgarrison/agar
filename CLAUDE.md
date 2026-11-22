@@ -83,7 +83,7 @@ It lives in `packages/core/src` (extracted from the spike in Phase 1, Nov 2026, 
 - **Popover.**
   - The canvas lives inside `PopoverContent`, which needs `keepMounted` so the canvas exists before the first open. The canvas margin is large (72px) so the jelly can start on the trigger.
   - Opening: wait one frame for placement, `place()` the jelly on the trigger's box (measured relative to the content), then `morphTo()` the panel.
-  - **Exit timing:** UI SDK keeps closing content mounted only for CSS transitions, or for script animations started in the **same task** as the close. In `onOpenChange(false)`, start a do-nothing Web Animation for the exit length (`content.animate([...], { duration: 360 })`), then morph the jelly back to the trigger. Verified: the content stays mounted through the shrink, then hides, and focus returns to the trigger.
+  - **Exit timing:** UI SDK keeps closing content mounted only for CSS transitions, or for script animations started in the **same task** as the close (not from an observer or effect). The spike started a do-nothing Web Animation in `onOpenChange(false)`. That misses controlled closes, which fire no `onOpenChange`, so `@agar/react` uses CSS instead (Nov 2026): `[data-jelly='ready'][data-ending-style]` gets `visibility: hidden` with a 360ms transition delay, which changes nothing visible until the jelly has shrunk. The binding watches `data-open` and morphs the jelly back. Verified in all three browsers: the content stays up through the shrink, then hides, and focus returns to the trigger.
 - **Progressive enhancement.**
   - The surface sets `data-jelly="ready"` on its container. Plain CSS fallbacks (a visible thumb or indicator, a solid panel) apply until then, and without WebGL.
   - Canvases are `aria-hidden` and `pointer-events: none`.
@@ -124,6 +124,8 @@ A Bun workspace (`workspaces` and `catalog` in the root package.json; Bun is pin
   - **Switch track (decided Nov 2026):** pale frosted glass when off, as in the spike, because a dark track showing through the translucent milk jelly made it look flat. The edge and the on fill keep 3:1; the white thumb on the off track is about 1.3:1, as on iOS, and the docs say so.
   - **Switch motion (decided Nov 2026):** a little bouncier than the spike, which matched PR #9 frame by frame but felt too damped. Its thumb pushes 1.4px into the end of the track (the spike: 0.4px) and settles in about 630ms (425ms). It also has the dock's hover lean at about half strength (`hoverReach` 2px within `hoverRadius` 34px; the dock uses 3px within 46px, which slides a 24px thumb rather than leaning it). The tuning lives in `THUMB_PARAMS` in `use-switch-jelly.ts`; the engine's defaults stay the spike's.
   - **Tabs (Nov 2026):** `TabsList` renders the canvas and UI SDK's `TabsIndicator` itself, so consumers never place an indicator. The binding reads `orientation` from `data-orientation`, so no context is needed. The engine's lead-and-trail move and soft walls are sideways only, so vertical lists `morphTo()` the next tab, with no walls and no sideways tug. `morphTo()` keeps a press's squish, so the binding calls `release(null)` first. Arrow keys still focus a disabled tab (UI SDK follows the APG here); it just can't be selected. UI SDK writes the indicator twice per change. Until Nov 2026 the engine read a second `release()` to the same box as a zero-distance move to the right, so on a leftward move the back edge raced the front one and squeezed the jelly to a blob halfway across. The engine now ignores a target the body is already heading for, so bindings can pass the same box twice.
+  - **Popover (Nov 2026):** `Popover` shares the trigger's ref through context (`popover/context.ts`); `PopoverContent` always passes `keepMounted` and renders the canvas and an `.agar-popover-body` wrapper. The binding only reads `data-open`, so it never wraps `onOpenChange`. Agar exposes the root's `open`/`defaultOpen`/`onOpenChange`/`onOpenChangeComplete`/`modal`/`dismissible`/`onDismissAttempt`, and the content's placement and focus props. Left out for now: controllers and payloads, `openOnHover`, `presentation="sheet"` (the jelly would need a sheet shape), `PopoverArrow`, `PopoverShortcut`, `inline` and `container`. No idle breathing, so the panel's body sleeps once it settles.
+  - **Glass palette (decided Nov 2026):** nearly opaque (alpha about 0.92 to 0.95), pale blue-white in light mode and deep navy in dark. The spike's 0.42 to 0.5 let whatever was behind the panel show through its text. A canvas can't blur what's behind it, so opacity is what keeps text at 4.5:1.
   - New form controls go in the `controlComponents` list for `jsx-a11y/label-has-associated-control` in `.oxlintrc.json`.
 - `apps/docs`: a custom Next.js app for the docs and playground. The spike's lab page is a starting point.
 - Tooling (chosen):
@@ -143,7 +145,10 @@ A Bun workspace (`workspaces` and `catalog` in the root package.json; Bun is pin
 - E2E keyboard tests use `tab()` from `e2e/keyboard.ts`. WebKit follows Safari, where plain Tab skips buttons and links.
 - E2E jelly checks use `e2e/jelly.ts`: it reads the drawn jelly back from the surface's canvas (`trackJelly`, `settledJelly`), and `patchContexts` refuses WebGL or every canvas context and counts WebGL2 contexts. `e2e/switch.spec.ts` is the template.
   - Measure options: `axis: 'y'` measures down, and `solid` sets the alpha that counts as jelly. The default (128) suits milk; translucent tint needs `solid: 24`, and its highlight skews the centre by about 1px, so tint tests compare offsets from a tab, not absolute positions (`e2e/tabs.spec.ts`).
+  - `press` clicks an element in the same task that starts sampling. A Playwright click returns a varying number of frames later, so a test of what happens in the first frames (the popover growing out of its trigger) must use it. A closed popover is hidden, so find it by class, not role.
 - jsdom has no Web Animations, so `test.setup.ts` stubs `Element.prototype.getAnimations` to return none. UI SDK calls it before unmounting closing content (tab panels, popovers).
+- jsdom has no Popover API either: `[popover]` is always `display: none`, so `test.setup.ts` shows `[popover][data-open]`. Without layout, UI SDK focuses the panel itself rather than its first field; e2e checks the field.
+- After a popover closes, UI SDK re-checks focus in a `setTimeout(0)`. If a test ends first, it fires after the file's jsdom is gone (`document is not defined`, about one run in eight), so `Popover.test.tsx` waits for one timer turn after each test.
 - `next dev` won't run twice from the same app folder, so stop any docs dev server before `bun run e2e` (its server is `next dev` on port 3100).
 - UI SDK coverage (checked at `0.1.0-beta.14`): it has every planned component except **Data table**, which needs its own headless layer (TanStack Table is the likely choice). It also has `calendar`, `date-picker`, `drawer`, `slider` and `segmented-control`.
 - Before publishing, create the `agar` npm org to claim the `@agar` scope. `@agar/ui` was unused on npm in Nov 2026, but the unscoped `agar` is taken. If the scope isn't available, fall back to `@agarrison/agar`.
@@ -178,8 +183,7 @@ The spike from agarrison.dev's `jelly-design-spike` branch (closed PR #9 there).
 | `body.ts`, `renderer.ts`, `stage.ts`, `palette.ts` | Done | Moved into `@agar/core` (Phase 1). The `.tsx` files below still import them by their old paths; read those imports as `@agar/core`. |
 | `useJelly.ts`, `JellySwitch.tsx` | Done | Moved into `@agar/react` as `internal/use-jelly.ts` and `switch/` (Nov 2026). The files below that import `./useJelly` should use `#internal/use-jelly` instead. |
 | `JellyTabs.tsx` | Done | Moved into `@agar/react` as `tabs/` (Nov 2026), as composable parts. Deleted from `seed/`, with its CSS. |
-| `JellyPopover.tsx` | Spike quality | Same as above. Also has a hard-coded "Done" button. |
-| `jelly.css` | Spike quality | Uses the site's CSS variables (`--dock-bg`, `--accent-deep`, ...), which need replacing with Agar tokens. Its Switch styles have moved to `styles.css`. |
+| `JellyPopover.tsx`, `jelly.css` | Done | Moved into `@agar/react` as `popover/` (Nov 2026), as composable parts without the hard-coded "Done" button. Deleted from `seed/`; the last of `jelly.css` was the popover's. |
 | `JellyLab.example.tsx` | Reference | The `/lab` demo page, for the docs app. |
 | `audio/*.m4a` | Optional | The press-down and press-up sounds. |
 
@@ -197,9 +201,10 @@ Verified in Chromium on desktop:
 - Once settled, only bodies with `breathe > 0` keep drawing.
 - Frame cost for the dock was about 0.13 ms.
 
-Verified by e2e in Chromium, Firefox and WebKit (Switch and Tabs, Nov 2026; macOS locally, Linux in CI):
+Verified by e2e in Chromium, Firefox and WebKit (Switch, Tabs and Popover, Nov 2026; macOS locally, Linux in CI):
 - Every surface on a page shares one WebGL2 context.
 - The jelly is drawn where UI SDK's thumb is, springs there on a toggle, tugs on press, and springs back when the pointer is released off the switch.
+- The popover's jelly grows out of its trigger, settles on the panel, and shrinks back while the closing panel stays up.
 - Under reduced motion it never overshoots.
 - Without WebGL, Canvas 2D draws it. With no canvas context at all, the CSS thumb shows and the switch still works.
 

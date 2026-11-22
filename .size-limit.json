@@ -19,6 +19,20 @@
     "limit": "0.6 kB"
   },
   {
+    "name": "@agar/react/popover",
+    "path": "packages/react/dist/popover/index.js",
+    "import": "{ Popover, PopoverTrigger, PopoverContent, PopoverTitle, PopoverDescription, PopoverClose }",
+    "ignore": ["react", "react-dom", "@ui-sdk/react", "@ui-sdk/core"],
+    "limit": "8.6 kB"
+  },
+  {
+    "name": "@agar/react/popover (without @agar/core)",
+    "path": "packages/react/dist/popover/index.js",
+    "import": "{ Popover, PopoverTrigger, PopoverContent, PopoverTitle, PopoverDescription, PopoverClose }",
+    "ignore": ["react", "react-dom", "@ui-sdk/react", "@ui-sdk/core", "@agar/core"],
+    "limit": "1.8 kB"
+  },
+  {
     "name": "@agar/react/switch",
     "path": "packages/react/dist/switch/index.js",
     "import": "{ Switch }",
@@ -57,6 +71,6 @@
     "name": "@agar/react/styles.css",
     "path": "packages/react/dist/styles.css",
     "rolldown": false,
-    "limit": "2 kB"
+    "limit": "2.7 kB"
   }
 ]

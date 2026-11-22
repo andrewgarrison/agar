@@ -5,7 +5,7 @@ export type Theme = 'light' | 'dark';
 /**
  * - `tint`: a glassy, dark tint that colours what's behind it (the dock's jelly).
  * - `milk`: milky and almost solid (switch thumbs).
- * - `glass`: frosted, coloured glass for larger panels (popovers).
+ * - `glass`: frosted, nearly opaque glass for panels with text on them (popovers).
  */
 export type JellyMaterial = 'tint' | 'milk' | 'glass';
 
@@ -72,8 +72,8 @@ export const JELLY_PALETTES: Readonly<Record<JellyMaterial, Readonly<Record<Them
   },
   glass: {
     light: {
-      tintTop: { red: 0.05, green: 0.32, blue: 0.55, alpha: 0.42 },
-      tintBottom: { red: 0.02, green: 0.22, blue: 0.42, alpha: 0.5 },
+      tintTop: { red: 0.9, green: 0.94, blue: 0.98, alpha: 0.92 },
+      tintBottom: { red: 0.8, green: 0.87, blue: 0.94, alpha: 0.94 },
       specular: 0.45,
       rim: 0.3,
       glow: 0.25,
@@ -81,8 +81,8 @@ export const JELLY_PALETTES: Readonly<Record<JellyMaterial, Readonly<Record<Them
       shadow: 0.2,
     },
     dark: {
-      tintTop: { red: 0.08, green: 0.12, blue: 0.22, alpha: 0.78 },
-      tintBottom: { red: 0.04, green: 0.07, blue: 0.14, alpha: 0.84 },
+      tintTop: { red: 0.1, green: 0.14, blue: 0.24, alpha: 0.92 },
+      tintBottom: { red: 0.05, green: 0.08, blue: 0.15, alpha: 0.95 },
       specular: 0.3,
       rim: 0.18,
       glow: 0.14,
