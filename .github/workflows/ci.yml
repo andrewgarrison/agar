@@ -62,7 +62,9 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Read the Playwright version
         id: pw
-        run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
+          echo "image=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
       - name: Restore ${{ matrix.browser }}
         id: browser-cache
         uses: actions/cache/restore@v4
@@ -78,11 +80,28 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ${{ steps.browser-cache.outputs.cache-primary-key }}
-      # The hosted image already has Chromium's and Firefox's OS libraries;
-      # WebKit's (GStreamer and friends) have to be installed every run.
-      - name: Install WebKit's OS libraries
+      # The hosted image already has Chromium's and Firefox's OS libraries.
+      # WebKit's (GStreamer and friends) are unpacked once and cached, instead
+      # of apt-installed every run (19-37 s). See scripts/ci/webkit-libs.sh.
+      - name: Restore WebKit's OS libraries
+        id: webkit-libs
         if: matrix.browser == 'webkit'
-        run: sudo env "PATH=$PATH" bunx playwright install-deps webkit
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/webkit-libs
+          key: webkit-libs-v3-${{ runner.os }}-${{ runner.arch }}-${{ steps.pw.outputs.image }}-${{ steps.pw.outputs.version }}
+      - name: Unpack WebKit's OS libraries
+        if: matrix.browser == 'webkit' && steps.webkit-libs.outputs.cache-hit != 'true'
+        run: scripts/ci/webkit-libs.sh unpack ~/webkit-libs
+      - name: Save WebKit's OS libraries
+        if: matrix.browser == 'webkit' && steps.webkit-libs.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/webkit-libs
+          key: ${{ steps.webkit-libs.outputs.cache-primary-key }}
+      - name: Use WebKit's OS libraries
+        if: matrix.browser == 'webkit'
+        run: scripts/ci/webkit-libs.sh use ~/webkit-libs
       - name: Restore Next.js build cache
         id: next-cache
         uses: actions/cache/restore@v4
