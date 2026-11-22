@@ -1,6 +1,10 @@
 # Opens a "Version packages" PR from pending changesets. Merging that PR
-# publishes to npm. Needs an NPM_TOKEN secret (or npm trusted publishing)
-# once the @agar scope exists.
+# publishes to npm.
+#
+# Off until publishing is set up: create the @agar npm org, add an NPM_TOKEN
+# secret (or npm trusted publishing), then set the repository variable
+# RELEASE_ENABLED to "true". Without the gate, every push to main tries to
+# publish the unreleased 0.0.0 packages and fails.
 name: Release
 
 on:
@@ -16,6 +20,7 @@ permissions:
 
 jobs:
   release:
+    if: vars.RELEASE_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
