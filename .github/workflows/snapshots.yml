@@ -26,11 +26,11 @@ jobs:
         with:
           ref: ${{ github.head_ref || github.ref_name }}
       - uses: ./.github/actions/setup
-      - run: bunx playwright install --with-deps chromium
+      - run: bunx playwright install --only-shell chromium
       - run: bun run build && bun run docs:build
       - run: bun run e2e --project=chromium --grep @visual --update-snapshots
         env:
-          CI: "true"
+          CI: 'true'
       - name: Commit baselines
         run: |
           git config user.name "github-actions[bot]"
@@ -42,4 +42,6 @@ jobs:
         if: always() && github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh pr edit ${{ github.event.pull_request.number }} --remove-label update-snapshots
+        run: >-
+          curl -fsS -X DELETE -H "Authorization: Bearer $GH_TOKEN"
+          "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/issues/${{ github.event.pull_request.number }}/labels/update-snapshots"

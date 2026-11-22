@@ -1,5 +1,5 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "types": ["@testing-library/jest-dom/vitest"] },
+  "compilerOptions": { "types": ["bun-types/vitest", "@testing-library/jest-dom/vitest"] },
   "include": ["src"]
 }

@@ -1,44 +1,118 @@
 name: CI
 
+# Every PR runs the full suite: there's no merge queue, so this is the check
+# that guards main. Target: a PR result in under 2 minutes. Track it with
+# `bun scripts/ci/audit.ts`; the timeouts below only catch hangs.
 on:
   pull_request:
   push:
     branches: [main]
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # A new commit on a PR cancels that PR's run in progress. Runs on main are
+  # never cancelled: they seed the caches PRs restore.
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 jobs:
-  check:
-    name: Lint, build, test, size
+  checks:
+    name: Checks (format, lint, types, unit, build, size, package)
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v5
+        with:
+          filter: blob:none
       - uses: ./.github/actions/setup
-      - run: bun run lint
-      - run: bun run build
-      - run: bun run typecheck
-      - run: bun run test
-      - run: bun run size
-      - run: bun run check:pkg
+      # Each check runs even when an earlier one fails, so one run reports
+      # every failure. Checks that read the build skip when it fails.
+      - name: Format
+        if: ${{ !cancelled() }}
+        run: bun run fmt:check
+      - name: Lint
+        if: ${{ !cancelled() }}
+        run: bun run lint
+      - name: Unit tests
+        if: ${{ !cancelled() }}
+        run: bun test
+      - name: Build
+        id: build
+        if: ${{ !cancelled() }}
+        run: bun run build
+      # The docs app is type-checked against the built declarations, which is
+      # what consumers get.
+      - name: Types
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: bun check
+      - name: Size
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: bun run size
+      - name: Package exports
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: bun run check:pkg
 
   e2e:
-    name: E2E, axe, visual (${{ matrix.browser }})
+    name: E2E + axe (${{ matrix.browser }})
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Browsers are restored from cache. Playwright's Docker image (browsers and
+    # OS libraries baked in) was measured too: pulling it takes ~21 s on hosted
+    # runners, longer than restoring and installing.
     strategy:
       fail-fast: false
       matrix:
         browser: [chromium, firefox, webkit]
     steps:
       - uses: actions/checkout@v5
+        with:
+          filter: blob:none
       - uses: ./.github/actions/setup
-      - run: bunx playwright install --with-deps ${{ matrix.browser }}
-      - run: bun run build && bun run docs:build
-      - run: bun run e2e --project=${{ matrix.browser }}
+      - name: Read the Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_OUTPUT"
+      - name: Restore ${{ matrix.browser }}
+        id: browser-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-v2-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
+      - name: Install ${{ matrix.browser }}
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        # Headless Chromium runs on the headless shell; full Chrome is never
+        # launched, so --only-shell leaves it out of the download and cache.
+        run: bunx playwright install ${{ matrix.browser == 'chromium' && '--only-shell ' || '' }}${{ matrix.browser }}
+      - name: Save ${{ matrix.browser }}
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.browser-cache.outputs.cache-primary-key }}
+      # The hosted image already has Chromium's and Firefox's OS libraries.
+      # WebKit's (GStreamer, GTK 4 and friends) are installed the supported
+      # way, with apt, on every run: about 20-40 s.
+      - name: Install WebKit's OS libraries
+        if: matrix.browser == 'webkit'
+        run: sudo env "PATH=$PATH" bunx playwright install-deps webkit
+      - name: Restore Next.js build cache
+        id: next-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: apps/docs/.next/cache
+          key: next-${{ hashFiles('bun.lock') }}-${{ hashFiles('apps/docs/**', 'packages/*/src/**') }}
+          restore-keys: next-${{ hashFiles('bun.lock') }}-
+      - name: Build
+        run: bun run build && bun run docs:build
+      - name: Save Next.js build cache
+        if: steps.next-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: apps/docs/.next/cache
+          key: ${{ steps.next-cache.outputs.cache-primary-key }}
+      - name: Playwright
+        run: bun run e2e --project=${{ matrix.browser }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

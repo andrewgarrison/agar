@@ -1,5 +1,6 @@
-import AxeBuilder from '@axe-core/playwright';
-import { expect, type Page } from '@playwright/test';
+import { AxeBuilder } from '@axe-core/playwright';
+import type { Page } from '@playwright/test';
+import { expect } from '@playwright/test';
 
 /** Fails the test on any WCAG 2.2 A/AA violation on the page. */
 export async function expectNoA11yViolations(page: Page): Promise<void> {

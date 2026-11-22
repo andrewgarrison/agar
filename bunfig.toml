@@ -1,3 +1,35 @@
 [install]
 # Pin exact versions on `bun add`, as .npmrc's save-exact did under pnpm.
 exact = true
+
+[fmt]
+# Same style the code already uses (Biome's settings before), so the switch
+# reformats as little as possible.
+printWidth = 120
+singleQuote = true
+jsxSingleQuote = false
+semi = true
+trailingComma = "all"
+arrowParens = "always"
+sortImports = true
+# seed/ is reference material; Markdown is prose (CLAUDE.md is hand-written).
+ignorePatterns = ["seed/**", "**/*.md", "e2e/__snapshots__/**"]
+
+[test]
+# Test files keep their `vitest` imports; bun test runs them natively.
+preload = ["./test.setup.ts"]
+# Components need a DOM. A test file that must run without one starts with
+# `// @vitest-environment node` (packages/core does).
+environment = "jsdom"
+# One global object; each file's modules load fresh. Random order flushes out
+# tests that depend on another test's leftovers (the seed is printed, and
+# `bun test --seed=<n>` replays it).
+isolate = "modules"
+randomize = true
+# Reset every mock, stub and env change after each test.
+restoreMocks = true
+mockReset = true
+clearMocks = true
+unstubEnvs = true
+unstubGlobals = true
+pathIgnorePatterns = ["seed/**", "e2e/**", "**/dist/**", "**/node_modules/**", "apps/docs/.next/**"]

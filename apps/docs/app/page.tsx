@@ -1,6 +1,7 @@
 import { VisuallyHidden } from '@agar/react/visually-hidden';
+import type { JSX } from 'react';
 
-export default function Home() {
+export default function Home(): JSX.Element {
   return (
     <main>
       <h1>Agar</h1>

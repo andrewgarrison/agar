@@ -1,6 +1,6 @@
 import type { ComponentPropsWithRef, JSX } from 'react';
 
-export interface VisuallyHiddenProps extends ComponentPropsWithRef<'span'> {}
+export type VisuallyHiddenProps = ComponentPropsWithRef<'span'>;
 
 /**
  * Hides content visually while keeping it available to screen readers. Use it
@@ -8,5 +8,6 @@ export interface VisuallyHiddenProps extends ComponentPropsWithRef<'span'> {}
  * layout.
  */
 export function VisuallyHidden({ className, ...props }: VisuallyHiddenProps): JSX.Element {
-  return <span className={className ? `agar-visually-hidden ${className}` : 'agar-visually-hidden'} {...props} />;
+  const classes = className === undefined ? 'agar-visually-hidden' : `agar-visually-hidden ${className}`;
+  return <span className={classes} {...props} />;
 }

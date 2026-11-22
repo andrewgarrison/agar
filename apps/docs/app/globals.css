@@ -1,6 +1,6 @@
 /* Agar's stylesheet declares `@layer ui-sdk, agar;`, so it must load before
    anything else that could declare a layer. */
-@import "@agar/react/styles.css";
+@import '@agar/react/styles.css';
 
 :root {
   color-scheme: light dark;

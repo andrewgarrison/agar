@@ -1,28 +1,53 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
   "files": {
     "includes": ["**", "!seed", "!**/dist", "!**/.next", "!**/next-env.d.ts", "!e2e/__snapshots__", "!**/*.md"]
   },
   "formatter": {
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineWidth": 120
-  },
-  "javascript": {
-    "formatter": { "quoteStyle": "single", "jsxQuoteStyle": "double", "semicolons": "always" }
+    "enabled": false
   },
   "css": {
-    "parser": { "cssModules": false }
+    "parser": {
+      "cssModules": false
+    }
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended",
-      "a11y": { "preset": "recommended" },
-      "style": { "useImportType": "error", "noNonNullAssertion": "warn" },
-      "correctness": { "useExhaustiveDependencies": "warn" }
+      "preset": "none",
+      "a11y": {
+        "noSvgWithoutTitle": "error"
+      },
+      "complexity": {
+        "noEmptyTypeParameters": "error",
+        "noThisInStatic": "error",
+        "noUselessStringRaw": "error",
+        "useSimpleNumberKeys": "error"
+      },
+      "correctness": {
+        "noStringCaseMismatch": "error"
+      },
+      "suspicious": {
+        "noSuspiciousSemicolonInJsx": "error"
+      }
     }
   },
-  "assist": { "actions": { "source": { "organizeImports": "on" } } }
+  "assist": {
+    "enabled": false
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.css"],
+      "linter": {
+        "rules": {
+          "preset": "recommended"
+        }
+      }
+    }
+  ]
 }
