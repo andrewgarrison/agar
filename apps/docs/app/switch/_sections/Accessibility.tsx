@@ -36,6 +36,11 @@ export function Accessibility(): JSX.Element {
         whenever it can&apos;t draw, a plain CSS thumb shows instead. With reduced motion, the thumb moves without
         wobbling. In forced-colours mode the system-coloured thumb replaces the jelly.
       </p>
+      <p>
+        The track&apos;s outline keeps 3:1 contrast against the page, and the thumb keeps 3:1 against the on fill. When
+        off, the thumb sits on a pale track and contrasts with it less, as on iOS: the off state also shows as the
+        thumb&apos;s position and the missing fill.
+      </p>
     </section>
   );
 }

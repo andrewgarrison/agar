@@ -51,10 +51,13 @@
     --agar-switch-inset: 2px;
     --agar-switch-border: 1px;
     --agar-switch-thumb: calc(var(--agar-switch-height) - 2 * (var(--agar-switch-inset) + var(--agar-switch-border)));
-    --agar-switch-track: light-dark(#6e7889, #4a5466);
-    --agar-switch-track-checked: light-dark(#1f5fd1, #3b7be8);
-    --agar-switch-edge: light-dark(#596374, #8a94a6);
-    --agar-switch-focus: light-dark(#1f5fd1, #8db4ff);
+    /* Off, the track is pale frosted glass, so the translucent milk jelly
+       reads bright and glossy over it, as in the spike. The edge keeps 3:1
+       against the page, and the on fill keeps 3:1 against the thumb. */
+    --agar-switch-track: light-dark(rgb(100 115 135 / 0.2), rgb(255 255 255 / 0.1));
+    --agar-switch-track-checked: light-dark(#0284c7, #2563eb);
+    --agar-switch-edge: light-dark(#7b8594, #737d8c);
+    --agar-switch-focus: light-dark(#0369a1, #8db4ff);
 
     position: relative;
     display: inline-block;
@@ -67,7 +70,7 @@
     border: var(--agar-switch-border) solid var(--agar-switch-edge);
     border-radius: 9999px;
     background: var(--agar-switch-track);
-    box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.2);
+    box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.18);
     cursor: pointer;
     vertical-align: middle;
     transition:

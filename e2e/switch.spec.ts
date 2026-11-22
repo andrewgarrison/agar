@@ -88,8 +88,10 @@ test.describe('switch', () => {
 
   test('every surface shares one WebGL context', async ({ page }) => {
     await patchContexts(page);
-    await open(page);
+    const root = await open(page);
     await expect(page.locator('[data-jelly="ready"]')).toHaveCount(4);
+    // The shared renderer makes its context on the first draw, not at mount.
+    await settledJelly(root);
     const made = await webGLContexts(page);
     // One shared context, or none where the browser has no WebGL2 (Canvas 2D draws instead).
     expect(made).toBe(Number(await supportsWebGL2(page)));

@@ -120,6 +120,7 @@ A Bun workspace (`workspaces` and `catalog` in the root package.json; Bun is pin
   - `internal/use-jelly.ts` gives a component one surface with one body, sized to its container. If no canvas can be made (jsdom, or no 2D context), it does nothing, so the CSS fallback stays.
   - **Theme:** `data-theme="light"` or `"dark"` on `<html>`, or else the OS setting (`internal/theme.ts`). The CSS follows the same two things through `color-scheme` and `light-dark()`. There's no provider and no `theme` prop.
   - Per-component CSS custom properties (`--agar-switch-track` and so on) stand in for tokens until the token set exists.
+  - **Switch track (decided Nov 2026):** pale frosted glass when off, as in the spike, because a dark track showing through the translucent milk jelly made it look flat. The edge and the on fill keep 3:1; the white thumb on the off track is about 1.3:1, as on iOS, and the docs say so. The motion keeps the spike's tuning exactly (checked frame by frame against PR #9).
   - New form controls go in the `controlComponents` list for `jsx-a11y/label-has-associated-control` in `.oxlintrc.json`.
 - `apps/docs`: a custom Next.js app for the docs and playground. The spike's lab page is a starting point.
 - Tooling (chosen):
