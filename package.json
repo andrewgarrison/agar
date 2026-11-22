@@ -18,7 +18,7 @@
   },
   "scripts": {
     "build": "bun --filter './packages/*' build",
-    "dev": "bun --filter './packages/*' --filter docs dev",
+    "dev": "bun run build && bun run --parallel --filter './packages/*' --filter docs dev",
     "docs:build": "bun --filter docs build",
     "lint": "bun lint --no-script --type-aware && biome lint .",
     "lint:fix": "bun lint --no-script --type-aware --fix && biome lint --write .",
