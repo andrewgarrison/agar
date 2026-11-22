@@ -1,0 +1,51 @@
+// Git hooks, run by hk (https://hk.jdx.dev). `bun install` installs them (see
+// the prepare script). They are hooks rather than a line in AGENTS.md because
+// agents skip steps; a hook can't be skipped by forgetting it.
+//
+// - pre-commit: format and lint the staged files, fixing what can be fixed.
+// - pre-push:   the same checks CI's Checks job runs (scripts/ci/checks.ts),
+//               with the same budgets. E2E stays in CI: building the docs app
+//               alone takes longer than the 9 s local budget.
+amends "package://github.com/jdx/hk/releases/download/v2.13.0/hk@2.13.0#/Config.pkl"
+
+local staged = new Mapping<String, Step> {
+  ["fmt"] {
+    glob = List("**/*.{ts,tsx,js,mjs,cjs,json,jsonc,css,yml,yaml,toml}")
+    check = "bun fmt --no-script --check {{files}}"
+    fix = "bun fmt --no-script {{files}}"
+  }
+  ["lint"] {
+    glob = List("**/*.{ts,tsx,js,mjs,cjs}")
+    // Runs after fmt, so it lints the formatted files.
+    depends = List("fmt")
+    check = "bun lint --no-script --type-aware {{files}}"
+    fix = "bun lint --no-script --type-aware --fix {{files}}"
+  }
+  ["lint-css"] {
+    glob = List("**/*.{css,ts,tsx}")
+    depends = List("fmt")
+    check = "bunx biome lint --no-errors-on-unmatched {{files}}"
+  }
+}
+
+hooks {
+  ["pre-commit"] {
+    fix = true
+    stash = "git"
+    steps = staged
+  }
+  ["pre-push"] {
+    steps {
+      ["ci-checks"] {
+        check = "bun scripts/ci/checks.ts"
+      }
+    }
+  }
+  ["check"] {
+    steps = staged
+  }
+  ["fix"] {
+    fix = true
+    steps = staged
+  }
+}
