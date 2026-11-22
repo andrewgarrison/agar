@@ -8,15 +8,16 @@ export default defineConfig({
   testDir: 'e2e',
   fullyParallel: true,
   forbidOnly: CI,
-  retries: CI ? 2 : 0,
+  // No retries, in CI or locally: a test that needs one has a bug. Find it.
+  retries: 0,
   reporter: CI ? [['github'], ['html', { open: 'never' }]] : 'list',
-  // Visual baselines are rendered on Linux in CI (see .github/workflows/snapshots.yml),
-  // so a Mac run compares against the Linux file and is expected to differ.
+  // Visual baselines are rendered on CI's Linux runners (see
+  // .github/workflows/snapshots.yml); a Mac run would render different fonts.
   snapshotPathTemplate: '{testDir}/__snapshots__/{testFilePath}/{arg}-{projectName}{ext}',
   expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },
   use: {
     baseURL: `http://localhost:${PORT}`,
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },

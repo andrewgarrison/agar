@@ -128,6 +128,27 @@ A Bun workspace (`workspaces` and `catalog` in the root package.json; Bun is pin
 - UI SDK coverage (checked at `0.1.0-beta.14`): it has every planned component except **Data table**, which needs its own headless layer (TanStack Table is the likely choice). It also has `calendar`, `date-picker`, `drawer`, `slider` and `segmented-control`.
 - Before publishing, create the `agar` npm org to claim the `@agar` scope. `@agar/ui` was unused on npm in Nov 2026, but the unscoped `agar` is taken. If the scope isn't available, fall back to `@agarrison/agar`.
 
+## CI
+
+Target: a PR gets its result in under 2 minutes. CI is the project's foundation, so it stays simple and standard: use each tool's supported path, not clever workarounds, even when a workaround is a few seconds faster. Three rules outrank speed:
+- The full suite runs on every PR. There's no merge queue (decided Nov 2026), so the PR run is what guards `main`. Diff-based test selection would let untested code reach `main`, so CI doesn't select.
+- Never hide a failure. No retries (Playwright's `retries` is 0), no wider test timeouts, no skipped tests. A check that needs a retry has a bug: find it.
+- Never check less. Lint rules and required checks only stay or grow.
+
+How CI is shaped (`.github/workflows/ci.yml`):
+- **`Checks` job:** format, lint, unit tests, build, then types, size and package exports against the build. One plain step per check, each running even when an earlier one fails, so one run reports every failure.
+- **`E2E + axe` jobs:** one per browser, each independent. No required job waits on another.
+- **Setup:**
+  - `.github/actions/setup` makes a blobless clone and restores the pinned Bun and `node_modules` from caches keyed on `bun.lock`. Bun comes from npm, because the pinned canary only exists there as a versioned build.
+  - Browsers and the Next.js build cache are cached too. Chromium installs only its headless shell (`--only-shell`), the only part headless tests use.
+  - WebKit's OS libraries are installed with `playwright install-deps` on every run (about 20–40 s), because that's the supported way. Unpacking them into a cache was tried and worked, but needed linker and graphics-driver workarounds (Nov 2026).
+  - Caches are saved right after they're built, not at the end of the job, so a failing job still warms them. PRs restore what `main` saved.
+- **Speed:** job `timeout-minutes` only catch hangs. Speed is tracked, not gated: timing gates on shared runners fail at random, because the same job's setup varies by 2× from run to run.
+- **Cancellation:** a new commit cancels a PR's run. Runs on `main` are never cancelled.
+- **Audit:** `bun scripts/ci/audit.ts [--branch b] [--runs n]` splits real runs into waiting, setup and running at p50 and p95. Fix the biggest bucket first.
+- **CI stays free:** GitHub-hosted runners on the public repo only. No paid or third-party runners (Blacksmith was considered and rejected, Nov 2026).
+- **Revisit later:** test sharding and per-file timings. With a few tests running in well under a second, one shard is fastest.
+
 ## Starting code (`seed/`)
 
 The spike from agarrison.dev's `jelly-design-spike` branch (closed PR #9 there). `seed/` is reference material: move code out of it into the packages as it's extracted, and delete the folder once it's empty. Don't import from it, and keep it out of builds, lint and tests.
