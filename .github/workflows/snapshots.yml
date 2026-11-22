@@ -26,7 +26,7 @@ jobs:
         with:
           ref: ${{ github.head_ref || github.ref_name }}
       - uses: ./.github/actions/setup
-      - run: bunx playwright install chromium
+      - run: bunx playwright install --only-shell chromium
       - run: bun run build && bun run docs:build
       - run: bun run e2e --project=chromium --grep @visual --update-snapshots
         env:

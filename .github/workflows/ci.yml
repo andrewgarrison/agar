@@ -70,10 +70,12 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
+          key: playwright-v2-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ matrix.browser }}
       - name: Install browsers
         if: steps.browser-cache.outputs.cache-hit != 'true'
-        run: bunx playwright install ${{ matrix.browser }}
+        # Headless Chromium runs on the headless shell; full Chrome is never
+        # launched, so --only-shell leaves it out of the download and cache.
+        run: bunx playwright install ${{ matrix.browser == 'chromium' && '--only-shell ' || '' }}${{ matrix.browser }}
       - name: Save ${{ matrix.browser }}
         if: steps.browser-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
