@@ -63,6 +63,7 @@ It lives in `packages/core/src` (extracted from the spike in Phase 1, Nov 2026, 
   - Each component owns a plain 2D canvas, called its **surface**, that sits behind its content. The shared renderer draws that surface's bodies into one offscreen WebGL2 canvas, then copies the pixels across with `drawImage` in the same task. That means there's no need for `preserveDrawingBuffer`.
   - The fragment shader draws the ring as a signed distance field, rounded by `ROUND` (10px). It uses a bevelled normal for the specular highlight, rim, inner glow and stroke, adds a drop shadow, and outputs premultiplied alpha.
   - There's a Canvas 2D fallback, and it recreates the context if the context is lost.
+  - **Fill cost (Nov 2026):** the shader walks all 56 ring edges for every pixel (twice, with the shadow), so each body draws only inside its ring's box plus the shadow's reach (a scissor), and pixels inside an inner box wholly within the ring (`ring-bounds.ts`) skip the walk: past the ring's edge the jelly is flat colour. The shadow's walk is skipped more than 4px inside. The pixels are identical; a popover's frame is about 4× cheaper. This matters wherever WebGL runs in software: CI's headless browsers, and real browsers with a blocklisted GPU. Before it, CI took about 200 ms per frame for a popover, so the loop's 50 ms cap slowed its physics to a quarter speed and the jelly never settled within a test's poll.
 - **`stage.ts`: one animation loop for every surface** (`loop.ts`).
   - Importing it has no side effects: the loop and its `visibilitychange` listener start with the first surface, so it's safe during SSR.
   - Steps every awake body and draws every awake surface.
@@ -220,7 +221,7 @@ Not yet tested:
 ## Open questions
 
 - Should the shared renderer use an `OffscreenCanvas` or a worker? Measure first.
-- Should bodies on one surface be batched into a single draw, and should large panels draw only inside a scissor rectangle?
+- Should bodies on one surface be batched into a single draw? (Large panels already draw only inside a scissor rectangle.)
 - Which components get a jelly at all, and which stay plain? A sketch:
   - Button: a squish when pressed.
   - Checkbox and Radio: a blob that pops in.
