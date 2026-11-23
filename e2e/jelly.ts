@@ -1,6 +1,6 @@
 // Reads jelly back from the canvas, so e2e tests check what the renderer and
 // stage actually drew, not just the DOM.
-import type { Locator, Page } from '@playwright/test';
+import type { ElementHandle, Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 interface Box {
@@ -18,6 +18,12 @@ export interface Measure {
    * Defaults to 128, for solid materials like milk; translucent tint needs less.
    */
   readonly solid?: number;
+  /**
+   * Clicks this element in the same task that starts sampling, so the first
+   * frame after the click is caught. A Playwright click returns a varying
+   * number of frames later.
+   */
+  readonly press?: ElementHandle | null;
 }
 
 /**
@@ -29,10 +35,10 @@ export interface Measure {
 export async function trackJelly(
   root: Locator,
   frames: number,
-  { axis = 'x', solid = 128 }: Measure = {},
+  { axis = 'x', solid = 128, press = null }: Measure = {},
 ): Promise<(number | null)[]> {
   const samples = await root.evaluate(
-    async (element, { count, down, cutoff }) => {
+    async (element, { count, down, cutoff, button }) => {
       const canvas = element.querySelector('canvas');
       const context = canvas?.getContext('2d');
       if (!canvas || !context) {
@@ -64,10 +70,13 @@ export async function trackJelly(
         const rest = await sample(left - 1);
         return [here, ...rest];
       };
+      if (button instanceof HTMLElement) {
+        button.click();
+      }
       const path = await sample(count);
       return path;
     },
-    { count: frames, down: axis === 'y', cutoff: solid },
+    { count: frames, down: axis === 'y', cutoff: solid, button: press },
   );
   return samples;
 }

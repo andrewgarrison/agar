@@ -21,6 +21,7 @@ uniform vec4 uTintBottom;
 uniform vec4 uFx;       // specular, rim, glow, stroke
 uniform float uShadow;
 uniform float uOpacity;
+uniform vec4 uInner;    // left, top, right, bottom of a box inside the ring
 out vec4 outColor;
 
 // Signed distance to the ring polygon (after Inigo Quilez), plus the nearest point.
@@ -46,16 +47,25 @@ vec4 over(vec4 top, vec4 bottom) { return top + bottom * (1.0 - top.a); }
 void main() {
   vec2 p = vec2(gl_FragCoord.x, uHeight - gl_FragCoord.y) / uDpr + uOrigin;
 
-  vec2 nearest;
-  float d = sdPoly(p, nearest) - uRound;
+  // Inside the ring the jelly is flat (no bevel, rim, glow, stroke or
+  // shadow reach that far), so a pixel in the inner box skips the ring walk.
+  vec2 nearest = p;
+  float d = -uRound;
+  if (p.x <= uInner.x || p.x >= uInner.z || p.y <= uInner.y || p.y >= uInner.w) {
+    d = sdPoly(p, nearest) - uRound;
+  }
   float px = 1.0 / uDpr;
   float cover = smoothstep(px, -px, d);
 
-  // Soft drop shadow, mostly outside the body.
-  vec2 nearestS;
-  float ds = sdPoly(p - vec2(0.0, 2.5), nearestS) - uRound;
-  float shadow = (1.0 - smoothstep(-2.0, 5.0, ds)) * smoothstep(-4.0, 1.0, d) * uShadow;
-  vec4 col = vec4(0.0, 0.0, 0.0, shadow);
+  // Soft drop shadow, mostly outside the body. Deeper than 4px inside, the
+  // body hides it completely, so skip the second ring walk there.
+  vec4 col = vec4(0.0);
+  float under = smoothstep(-4.0, 1.0, d);
+  if (under > 0.0) {
+    vec2 nearestS;
+    float ds = sdPoly(p - vec2(0.0, 2.5), nearestS) - uRound;
+    col.a = (1.0 - smoothstep(-2.0, 5.0, ds)) * under * uShadow;
+  }
 
   if (d < px) {
     // Bevel: a quarter circle uRound px wide round the edge, flat inside.

@@ -1,11 +1,21 @@
 // The WebGL2 renderer. One instance is shared by every surface on the page.
 
+import type { JellyBody } from './body';
 import type { DrawItem, DrawTarget } from './draw-target';
 import { growCanvas, isVisible, rgbaToArray } from './draw-target';
+import type { Rect } from './geometry';
 import { RING, ROUND } from './params';
+import { innerBox, ringBounds } from './ring-bounds';
 import { fragmentShader, VERTEX_SHADER } from './shader';
 
 const TRIANGLE = 3;
+// How far past the ring anything is drawn, in CSS px: the rounding, then the
+// drop shadow, which fades out past the edge and sits lower (see shader.ts).
+const SHADOW_FADE = 5;
+const SHADOW_DROP = 2.5;
+const REACH = ROUND + SHADOW_FADE + SHADOW_DROP;
+// An inner box no pixel is in.
+const NO_BOX: Rect = { left: 0, right: 0, top: 0, bottom: 0 };
 
 interface Uniforms {
   points: WebGLUniformLocation | null;
@@ -19,6 +29,7 @@ interface Uniforms {
   effects: WebGLUniformLocation | null;
   shadow: WebGLUniformLocation | null;
   opacity: WebGLUniformLocation | null;
+  inner: WebGLUniformLocation | null;
 }
 
 function locate(gl: WebGL2RenderingContext, program: WebGLProgram): Uniforms {
@@ -34,6 +45,7 @@ function locate(gl: WebGL2RenderingContext, program: WebGLProgram): Uniforms {
     effects: gl.getUniformLocation(program, 'uFx'),
     shadow: gl.getUniformLocation(program, 'uShadow'),
     opacity: gl.getUniformLocation(program, 'uOpacity'),
+    inner: gl.getUniformLocation(program, 'uInner'),
   };
 }
 
@@ -76,6 +88,19 @@ function createContext(canvas: HTMLCanvasElement): WebGL2RenderingContext {
   return gl;
 }
 
+// Limits drawing to the ring's box, plus REACH, in device px with GL's origin
+// at the bottom left. The fragment shader walks the whole ring for every
+// pixel, so skipping the empty canvas margin halves the cost of a big panel:
+// it matters wherever WebGL runs in software.
+function scissorTo(gl: WebGL2RenderingContext, target: DrawTarget, bounds: Rect): void {
+  const { origin, dpr, height } = target;
+  const x0 = Math.max(0, Math.floor((bounds.left - REACH - origin.x) * dpr));
+  const x1 = Math.ceil((bounds.right + REACH - origin.x) * dpr);
+  const y0 = Math.max(0, Math.floor(height - (bounds.bottom + REACH - origin.y) * dpr));
+  const y1 = Math.ceil(height - (bounds.top - REACH - origin.y) * dpr);
+  gl.scissor(x0, y0, Math.max(0, x1 - x0), Math.max(0, y1 - y0));
+}
+
 // Draw in the bottom-left width × height (GL's origin): the top-left once the
 // copy reads from canvas.height - height.
 function clear(gl: WebGL2RenderingContext, width: number, height: number): void {
@@ -113,7 +138,7 @@ export class GLRenderer {
     this.prepare(target);
     for (const item of items) {
       if (isVisible(item.body)) {
-        this.drawBody(item);
+        this.drawBody(target, item);
       }
     }
     // Copy before the drawing buffer is discarded, so no preserveDrawingBuffer.
@@ -136,11 +161,22 @@ export class GLRenderer {
     gl.uniform1f(uniforms.round, ROUND);
   }
 
-  private drawBody({ body, palette }: DrawItem): void {
+  // Uploads the body's ring, and limits drawing to round it: the scissor
+  // skips the empty margin, the inner box skips the ring walk inside it.
+  private setRing(target: DrawTarget, body: JellyBody): void {
     const { gl, uniforms } = this;
     const [top, bottom] = body.yRange;
     gl.uniform2fv(uniforms.points, body.pts);
     gl.uniform2f(uniforms.yRange, top, bottom);
+    const bounds = ringBounds(body.pts);
+    scissorTo(gl, target, bounds);
+    const inner = innerBox(body.pts, bounds) ?? NO_BOX;
+    gl.uniform4f(uniforms.inner, inner.left, inner.top, inner.right, inner.bottom);
+  }
+
+  private drawBody(target: DrawTarget, { body, palette }: DrawItem): void {
+    const { gl, uniforms } = this;
+    this.setRing(target, body);
     gl.uniform4fv(uniforms.tintTop, rgbaToArray(palette.tintTop));
     gl.uniform4fv(uniforms.tintBottom, rgbaToArray(palette.tintBottom));
     gl.uniform4f(uniforms.effects, palette.specular, palette.rim, palette.glow, palette.stroke);
