@@ -12,7 +12,10 @@ export interface Tickable {
 }
 
 // Never simulate more than this many seconds in one frame (after a stall).
-const MAX_FRAME = 0.05;
+// Down to 10 fps the physics keeps real time, in fixed steps, so a slow
+// device still finishes on time: the popover's shrink has to end before the
+// stylesheet hides the closing panel. A hidden tab stops the loop instead.
+const MAX_FRAME = 0.1;
 const MS_PER_SECOND = 1000;
 
 export class Loop {
