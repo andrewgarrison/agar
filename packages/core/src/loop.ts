@@ -23,8 +23,15 @@ export class Loop {
   private frameId = 0;
   private last = 0;
   private pending = 0;
+  private readonly warmUps: () => number;
 
-  public constructor() {
+  /**
+   * @param warmUps counts the renderer's one-off work (see `rendererWarmUps`).
+   * A frame that does some restarts the clock after it, so the next frame
+   * doesn't simulate it.
+   */
+  public constructor(warmUps: () => number = (): number => 0) {
+    this.warmUps = warmUps;
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         this.wake();
@@ -45,23 +52,39 @@ export class Loop {
   }
 
   // Whole physics steps due since the last frame; the remainder carries over.
+  // A frame's timestamp is when the frame began, so it can be a little before
+  // a `wake` or a warm-up that ended during that frame: never count backwards.
   private stepsUntil(now: number): number {
-    this.pending += Math.min((now - this.last) / MS_PER_SECOND, MAX_FRAME);
+    this.pending += Math.min(Math.max(now - this.last, 0) / MS_PER_SECOND, MAX_FRAME);
     this.last = now;
     const steps = Math.floor(this.pending / STEP);
     this.pending -= steps * STEP;
     return steps;
   }
 
-  private readonly frame = (now: number): void => {
-    this.frameId = 0;
-    const steps = this.stepsUntil(now);
+  // Ticks every awake, on-screen surface. True when any is still awake.
+  private tickAll(steps: number): boolean {
     let anyAwake = false;
     for (const surface of this.surfaces) {
       if (surface.awake && surface.onScreen) {
         surface.tick(steps);
         anyAwake ||= surface.awake;
       }
+    }
+    return anyAwake;
+  }
+
+  private readonly frame = (now: number): void => {
+    this.frameId = 0;
+    const steps = this.stepsUntil(now);
+    const warmUps = this.warmUps();
+    const anyAwake = this.tickAll(steps);
+    // The renderer just warmed up: a new context, or its first draw call (the
+    // shader compile), often a tenth of a second or more. Counting that time
+    // would make the next frame jump: a popover opened first on a page showed
+    // its jelly already most of the way out of the trigger.
+    if (this.warmUps() !== warmUps) {
+      this.last = performance.now();
     }
     if (anyAwake) {
       this.frameId = requestAnimationFrame(this.frame);

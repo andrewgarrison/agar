@@ -115,6 +115,11 @@ export class GLRenderer {
   public readonly canvas: HTMLCanvasElement;
   /** Set when the browser drops the context; the next draw makes a new renderer. */
   public lost = false;
+  /**
+   * False until the first body is drawn. Browsers compile the shader for
+   * the GPU on that first draw call, so it's slow, often a tenth of a second.
+   */
+  public hasDrawn = false;
   private readonly gl: WebGL2RenderingContext;
   private readonly program: WebGLProgram;
   private readonly uniforms: Uniforms;
@@ -183,5 +188,6 @@ export class GLRenderer {
     gl.uniform1f(uniforms.shadow, palette.shadow);
     gl.uniform1f(uniforms.opacity, body.opacity);
     gl.drawArrays(gl.TRIANGLES, 0, TRIANGLE);
+    this.hasDrawn = true;
   }
 }

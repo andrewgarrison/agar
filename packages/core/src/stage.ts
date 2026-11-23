@@ -10,7 +10,7 @@ import type { DrawItem } from './draw-target';
 import { Loop } from './loop';
 import type { JellyPalette } from './palettes';
 import { STEP } from './params';
-import { drawSurface } from './renderer';
+import { drawSurface, rendererWarmUps } from './renderer';
 
 const MAX_DPR = 2;
 const DEFAULT_MARGIN = 12;
@@ -19,7 +19,7 @@ const DEFAULT_MARGIN = 12;
 const stage: { loop: Loop | null } = { loop: null };
 
 function getLoop(): Loop {
-  stage.loop ??= new Loop();
+  stage.loop ??= new Loop(rendererWarmUps);
   return stage.loop;
 }
 
