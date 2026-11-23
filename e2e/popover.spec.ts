@@ -50,6 +50,21 @@ async function openAndTrack(page: Page, frames: number): Promise<number[]> {
   return drawn(await trackJelly(closed, frames, { ...DOWN, press }));
 }
 
+/** Closes with Escape, then reopens in the same task the exit ends in. */
+async function reopenAsItCloses(page: Page): Promise<void> {
+  const opener = await trigger(page).elementHandle();
+  await panel(page).evaluate((content, button) => {
+    const observer = new MutationObserver(() => {
+      if (!Object.hasOwn(content.dataset, 'endingStyle')) {
+        observer.disconnect();
+        button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      }
+    });
+    observer.observe(content, { attributes: true, attributeFilter: ['data-ending-style'] });
+    content.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  }, opener);
+}
+
 /** Closes with the Done button, and returns how long the panel stayed on the page after. */
 async function closeAndTime(page: Page): Promise<number> {
   const elapsed = await panel(page).evaluate(async (content) => {
@@ -152,12 +167,14 @@ test.describe('popover jelly', () => {
     await expect(trigger(page)).toBeFocused();
   });
 
-  test('reopening while it closes grows it again', async ({ page }) => {
+  // Reopening just as the close finishes hid and showed the canvas between two
+  // intersection reports, and the stage read the older one: off screen, so
+  // it never drew again.
+  test('reopening as it finishes closing grows it again', async ({ page }) => {
     await open(page);
     await trigger(page).click();
     await settledJelly(panel(page), DOWN);
-    await page.keyboard.press('Escape');
-    await trigger(page).click();
+    await reopenAsItCloses(page);
     await expect(panel(page)).toBeVisible();
     expect(await offCentre(page)).toBeLessThan(3);
   });
@@ -165,7 +182,7 @@ test.describe('popover jelly', () => {
   test('every surface shares one WebGL context', async ({ page }) => {
     await patchContexts(page);
     await open(page);
-    await expect(page.locator('[data-jelly="ready"]')).toHaveCount(3);
+    await expect(page.locator('[data-jelly="ready"]')).toHaveCount(4);
     // The shared renderer makes its context on the first draw, not at mount.
     await trigger(page).click();
     await settledJelly(panel(page), DOWN);

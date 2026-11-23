@@ -1,5 +1,9 @@
 import type { JSX } from 'react';
 
+const jelly = `.agar-switch {
+  --agar-jelly-tint: light-dark(#fff, #e8ecf2);
+}`;
+
 const theming = `.agar-switch {
   --agar-switch-track: light-dark(rgb(100 115 135 / 0.2), rgb(255 255 255 / 0.1));
   --agar-switch-track-checked: light-dark(#0284c7, #2563eb);
@@ -18,6 +22,14 @@ export function Theming(): JSX.Element {
       </p>
       <pre>
         <code>{theming}</code>
+      </pre>
+      <p>
+        Set <code>--agar-jelly-tint</code> to recolour the jelly itself, with any CSS colour, including{' '}
+        <code>light-dark()</code> and alpha. <code>--agar-jelly-tint-bottom</code> adds a gradient. The jelly keeps its
+        highlights and shadow. It reads the colour when it mounts and when the theme changes.
+      </p>
+      <pre>
+        <code>{jelly}</code>
       </pre>
     </section>
   );

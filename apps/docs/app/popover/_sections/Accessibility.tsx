@@ -35,10 +35,11 @@ export function Accessibility(): JSX.Element {
         </tbody>
       </table>
       <p>
-        The jelly is an <code>aria-hidden</code> canvas that ignores the pointer. Its glass is nearly opaque, so text
-        keeps 4.5:1 over a plain page; over busy content, a little of what&apos;s behind shows through. Until the jelly
-        is ready, and whenever it can&apos;t draw, a plain frosted panel shows instead. With reduced motion, the panel
-        appears and disappears without growing or wobbling. In forced-colours mode a system-coloured panel replaces it.
+        The jelly is an <code>aria-hidden</code> canvas that ignores the pointer. By default it&apos;s opaque, and its
+        text keeps 4.5:1. If you set your own colour, check the text against it, and adjust{' '}
+        <code>--agar-popover-text</code> to match. Until the jelly is ready, and whenever it can&apos;t draw, a plain
+        panel in the same colour shows instead. With reduced motion, the panel appears and disappears without growing or
+        wobbling. In forced-colours mode a system-coloured panel replaces it.
       </p>
     </section>
   );

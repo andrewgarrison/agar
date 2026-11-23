@@ -8,7 +8,7 @@ import {
 } from '@agar/react/popover';
 import type { JSX } from 'react';
 
-/** Live popovers: an explanation, a short form, and one that opens above. */
+/** Live popovers: an explanation, a short form, one that opens above, and one in your own colour. */
 export function Examples(): JSX.Element {
   return (
     <section aria-labelledby="examples" className="demo">
@@ -41,6 +41,16 @@ export function Examples(): JSX.Element {
           <PopoverDescription>
             Pick a side with <code>side</code>. It flips when there isn&apos;t room.
           </PopoverDescription>
+        </PopoverContent>
+      </Popover>
+      <Popover>
+        <PopoverTrigger>Your colours</PopoverTrigger>
+        <PopoverContent className="popover-mint">
+          <PopoverTitle>Mint</PopoverTitle>
+          <PopoverDescription>
+            One custom property, <code>--agar-jelly-tint</code>, recolours the jelly and the plain panel.
+          </PopoverDescription>
+          <PopoverClose>Done</PopoverClose>
         </PopoverContent>
       </Popover>
     </section>

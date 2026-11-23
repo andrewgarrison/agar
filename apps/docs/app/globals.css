@@ -3,7 +3,8 @@
 @import '@agar/react/styles.css';
 
 :root {
-  color-scheme: light dark;
+  /* No color-scheme here: Agar's stylesheet sets it, and follows
+     data-theme on <html>. An unlayered one here would override that. */
   font-family: system-ui, sans-serif;
   line-height: 1.5;
 }
@@ -67,4 +68,9 @@ td {
   background: light-dark(rgb(255 255 255 / 0.8), rgb(0 0 0 / 0.3));
   color: inherit;
   font: inherit;
+}
+
+/* The custom-colour example on the Popover page. */
+.popover-mint {
+  --agar-jelly-tint: light-dark(rgb(214 245 230 / 0.96), rgb(18 66 52 / 0.96));
 }

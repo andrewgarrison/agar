@@ -59,6 +59,9 @@ function triggerRect(content: HTMLElement, trigger: HTMLElement | null): Rect | 
 // Grows out of the trigger into the panel. Without a trigger to grow from, it
 // fades in where the panel is.
 function grow(jelly: Jelly, content: HTMLElement, trigger: HTMLElement | null): void {
+  // Read the colour fresh. It may have changed while the panel was closed,
+  // and Firefox doesn't restyle an open popover when the theme changes.
+  jelly.recolor();
   const from = triggerRect(content, trigger) ?? panelRect(content);
   jelly.body.place(from);
   jelly.body.opacity = 0;

@@ -328,18 +328,19 @@
   }
 
   /* The panel. The jelly draws its glass; until it's ready, and whenever it
-     can't draw, a plain frosted panel shows instead. Text on either keeps
-     4.5:1 over a plain page. */
+     can't draw, a plain panel shows instead. Text on either keeps 4.5:1. */
   .agar-popover {
     --agar-popover-width: 18rem;
     --agar-popover-radius: 20px;
-    --agar-popover-panel: light-dark(rgb(224 234 244 / 0.96), rgb(14 20 34 / 0.94));
+    /* The plain panel matches the glass jelly. Set --agar-jelly-tint to
+       recolour both. */
+    --agar-popover-panel: light-dark(#fff, #2b2e33);
     --agar-popover-edge: light-dark(rgb(100 115 135 / 0.35), rgb(255 255 255 / 0.18));
     --agar-popover-text: light-dark(#0b1b2b, #fff);
-    --agar-popover-muted: light-dark(#1e3448, rgb(255 255 255 / 0.82));
-    --agar-popover-close: light-dark(rgb(255 255 255 / 0.55), rgb(255 255 255 / 0.12));
-    --agar-popover-close-hover: light-dark(rgb(255 255 255 / 0.8), rgb(255 255 255 / 0.2));
-    --agar-popover-close-edge: light-dark(rgb(11 27 43 / 0.35), rgb(255 255 255 / 0.3));
+    --agar-popover-muted: light-dark(#3d4654, rgb(255 255 255 / 0.78));
+    --agar-popover-close: light-dark(rgb(100 115 135 / 0.1), rgb(255 255 255 / 0.1));
+    --agar-popover-close-hover: light-dark(rgb(100 115 135 / 0.18), rgb(255 255 255 / 0.18));
+    --agar-popover-close-edge: light-dark(rgb(100 115 135 / 0.5), rgb(255 255 255 / 0.3));
 
     box-sizing: border-box;
     width: var(--agar-popover-width);
@@ -353,10 +354,20 @@
     color: var(--agar-popover-text);
   }
 
+  /* Firefox doesn't pass color-scheme down into an open popover in the top
+     layer, so the panel would follow the OS setting rather than data-theme
+     on <html>, while its jelly follows data-theme. Set it on the panel. */
+  :root[data-theme='light'] .agar-popover {
+    color-scheme: light;
+  }
+
+  :root[data-theme='dark'] .agar-popover {
+    color-scheme: dark;
+  }
+
   .agar-popover:not([data-jelly='ready']) {
     border: 1px solid var(--agar-popover-edge);
-    background: var(--agar-popover-panel);
-    backdrop-filter: blur(16px);
+    background: var(--agar-jelly-tint, var(--agar-popover-panel));
   }
 
   .agar-popover:focus-visible {

@@ -54,8 +54,11 @@ export class JellySurface {
     this.margin = margin;
     getLoop().surfaces.add(this);
     if (typeof IntersectionObserver === 'function') {
-      this.observer = new IntersectionObserver(([entry]) => {
-        this.onScreen = entry?.isIntersecting ?? true;
+      // One callback can carry several entries for the canvas, oldest first,
+      // when it's hidden and shown again quickly (a popover reopened as it
+      // closes). Only the last one is current.
+      this.observer = new IntersectionObserver((entries) => {
+        this.onScreen = entries.at(-1)?.isIntersecting ?? true;
         if (this.onScreen) {
           this.wake();
         }

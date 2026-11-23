@@ -23,42 +23,42 @@
     "path": "packages/react/dist/popover/index.js",
     "import": "{ Popover, PopoverTrigger, PopoverContent, PopoverTitle, PopoverDescription, PopoverClose }",
     "ignore": ["react", "react-dom", "@ui-sdk/react", "@ui-sdk/core"],
-    "limit": "8.6 kB"
+    "limit": "9 kB"
   },
   {
     "name": "@agar/react/popover (without @agar/core)",
     "path": "packages/react/dist/popover/index.js",
     "import": "{ Popover, PopoverTrigger, PopoverContent, PopoverTitle, PopoverDescription, PopoverClose }",
     "ignore": ["react", "react-dom", "@ui-sdk/react", "@ui-sdk/core", "@agar/core"],
-    "limit": "1.8 kB"
+    "limit": "2.1 kB"
   },
   {
     "name": "@agar/react/switch",
     "path": "packages/react/dist/switch/index.js",
     "import": "{ Switch }",
     "ignore": ["react", "react-dom", "@ui-sdk/react", "@ui-sdk/core"],
-    "limit": "8.8 kB"
+    "limit": "9 kB"
   },
   {
     "name": "@agar/react/switch (without @agar/core)",
     "path": "packages/react/dist/switch/index.js",
     "import": "{ Switch }",
     "ignore": ["react", "react-dom", "@ui-sdk/react", "@ui-sdk/core", "@agar/core"],
-    "limit": "1.9 kB"
+    "limit": "2.2 kB"
   },
   {
     "name": "@agar/react/tabs",
     "path": "packages/react/dist/tabs/index.js",
     "import": "{ Tabs, TabsList, TabsTab, TabsPanel }",
     "ignore": ["react", "react-dom", "@ui-sdk/react", "@ui-sdk/core"],
-    "limit": "8.6 kB"
+    "limit": "9.2 kB"
   },
   {
     "name": "@agar/react/tabs (without @agar/core)",
     "path": "packages/react/dist/tabs/index.js",
     "import": "{ Tabs, TabsList, TabsTab, TabsPanel }",
     "ignore": ["react", "react-dom", "@ui-sdk/react", "@ui-sdk/core", "@agar/core"],
-    "limit": "2.1 kB"
+    "limit": "2.4 kB"
   },
   {
     "name": "@agar/react/visually-hidden",
@@ -71,6 +71,6 @@
     "name": "@agar/react/styles.css",
     "path": "packages/react/dist/styles.css",
     "rolldown": false,
-    "limit": "2.7 kB"
+    "limit": "2.9 kB"
   }
 ]

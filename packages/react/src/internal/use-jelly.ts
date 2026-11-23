@@ -1,15 +1,22 @@
-import type { BodyOptions, JellyMaterial, Theme } from '@agar/core';
+import type { BodyOptions, JellyMaterial, JellyPalette, Theme } from '@agar/core';
 import { JELLY_PALETTES, JellyBody, JellySurface } from '@agar/core';
 import type { RefObject } from 'react';
 import { useEffect, useEffectEvent, useRef } from 'react';
 
+import { withCustomTint } from './jelly-color';
 import { noop } from './noop';
-import { useTheme } from './theme';
+import { currentTheme, useTheme } from './theme';
 
 /** A surface with one body on it. */
 export interface Jelly {
   readonly body: JellyBody;
   readonly surface: JellySurface;
+  /**
+   * Reads the palette again: the material's for the current theme, with the
+   * container's `--agar-jelly-tint`. It runs on mount and on theme changes;
+   * call it when the colour may have changed otherwise.
+   */
+  readonly recolor: (theme?: Theme) => void;
 }
 
 export interface JellyOptions {
@@ -21,12 +28,22 @@ export interface JellyOptions {
   readonly onLayout: (jelly: Jelly, container: HTMLElement) => void;
 }
 
-function createJelly(canvas: HTMLCanvasElement, options: JellyOptions, theme: Theme): Jelly | null {
+// The material's palette for the theme, recoloured by the container's
+// `--agar-jelly-tint` when it sets one.
+function paletteFor(material: JellyMaterial, theme: Theme, container: HTMLElement): JellyPalette {
+  return withCustomTint(JELLY_PALETTES[material][theme], container);
+}
+
+function createJelly(canvas: HTMLCanvasElement, container: HTMLElement, options: JellyOptions): Jelly | null {
+  const palette = (theme: Theme): JellyPalette => paletteFor(options.material, theme, container);
   try {
     const surface = new JellySurface(canvas, options.margin);
     const body = new JellyBody(options.body);
-    surface.add(body, JELLY_PALETTES[options.material][theme]);
-    return { body, surface };
+    surface.add(body, palette(currentTheme()));
+    const recolor = (theme: Theme = currentTheme()): void => {
+      surface.setPalette(body, palette(theme));
+    };
+    return { body, surface, recolor };
   } catch {
     // No 2D canvas to draw on, so the plain CSS fallback stays.
     return null;
@@ -74,7 +91,9 @@ export function useJelly(
 ): RefObject<Jelly | null> {
   const theme = useTheme();
   const jellyRef = useRef<Jelly | null>(null);
-  const create = useEffectEvent((canvas: HTMLCanvasElement) => createJelly(canvas, options, theme));
+  const create = useEffectEvent((canvas: HTMLCanvasElement, container: HTMLElement) =>
+    createJelly(canvas, container, options),
+  );
   const onLayout = useEffectEvent((jelly: Jelly, container: HTMLElement) => {
     options.onLayout(jelly, container);
   });
@@ -82,7 +101,7 @@ export function useJelly(
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
-    const jelly = canvas === null ? null : create(canvas);
+    const jelly = canvas === null || container === null ? null : create(canvas, container);
     if (jelly === null || container === null) {
       return noop;
     }
@@ -94,11 +113,11 @@ export function useJelly(
     };
   }, [canvasRef, containerRef]);
 
-  const { material } = options;
+  // A new theme changes the material's palette, and can change the custom
+  // tint too, through `light-dark()`.
   useEffect(() => {
-    const jelly = jellyRef.current;
-    jelly?.surface.setPalette(jelly.body, JELLY_PALETTES[material][theme]);
-  }, [material, theme]);
+    jellyRef.current?.recolor(theme);
+  }, [theme]);
 
   return jellyRef;
 }

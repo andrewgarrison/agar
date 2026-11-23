@@ -1,5 +1,9 @@
 import type { JSX } from 'react';
 
+const jelly = `.agar-tabs-list {
+  --agar-jelly-tint: light-dark(rgb(3 30 55 / 0.14), rgb(255 255 255 / 0.16));
+}`;
+
 const theming = `.agar-tabs {
   --agar-tabs-list: light-dark(rgb(100 115 135 / 0.12), rgb(255 255 255 / 0.08));
   --agar-tabs-text: light-dark(#4b5563, #a7b0bd);
@@ -18,6 +22,14 @@ export function Theming(): JSX.Element {
       </p>
       <pre>
         <code>{theming}</code>
+      </pre>
+      <p>
+        Set <code>--agar-jelly-tint</code> to recolour the jelly itself, with any CSS colour, including{' '}
+        <code>light-dark()</code> and alpha. <code>--agar-jelly-tint-bottom</code> adds a gradient. The jelly keeps its
+        highlights and shadow. It reads the colour when it mounts and when the theme changes.
+      </p>
+      <pre>
+        <code>{jelly}</code>
       </pre>
     </section>
   );
