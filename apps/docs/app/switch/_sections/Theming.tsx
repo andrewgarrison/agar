@@ -6,7 +6,7 @@ const jelly = `.agar-switch {
 
 const theming = `.agar-switch {
   --agar-switch-track: light-dark(rgb(100 115 135 / 0.2), rgb(255 255 255 / 0.1));
-  --agar-switch-track-checked: light-dark(#0284c7, #2563eb);
+  --agar-switch-track-checked: var(--agar-accent);
   --agar-switch-edge: light-dark(#7b8594, #737d8c);
 }`;
 
@@ -18,7 +18,8 @@ export function Theming(): JSX.Element {
       <p>
         Colours follow <code>color-scheme</code>: the OS setting, or <code>data-theme=&quot;light&quot;</code> or{' '}
         <code>&quot;dark&quot;</code> on <code>&lt;html&gt;</code>. The jelly&apos;s milk palette follows the same
-        setting. Override the custom properties to restyle the track:
+        setting. A switch that&apos;s on fills with the system accent, <code>--agar-accent</code> (grape unless you set
+        it). Override the custom properties to restyle the track:
       </p>
       <pre>
         <code>{theming}</code>

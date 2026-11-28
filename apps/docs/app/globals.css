@@ -74,3 +74,36 @@ td {
 .popover-mint {
   --agar-jelly-tint: light-dark(rgb(214 245 230 / 0.96), rgb(18 66 52 / 0.96));
 }
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.hint {
+  font-size: 0.875rem;
+}
+
+/* The pending examples on the Button page. */
+.spinner {
+  width: 0.875em;
+  height: 0.875em;
+  border: 2px solid currentcolor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    rotate: 1turn;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2s;
+  }
+}

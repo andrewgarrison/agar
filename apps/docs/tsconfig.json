@@ -2,6 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "preserve",
+    // The docs run in current browsers only, so they can use
+    // Promise.withResolvers. The packages stay on ES2023 for consumers.
+    "lib": ["ES2023", "ES2024.Promise", "DOM", "DOM.Iterable"],
     "isolatedDeclarations": false,
     "declaration": false,
     "allowJs": false,

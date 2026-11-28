@@ -26,6 +26,8 @@ export interface JellyOptions {
   readonly body?: BodyOptions;
   /** Runs on mount and whenever the container resizes. Place the body here. */
   readonly onLayout: (jelly: Jelly, container: HTMLElement) => void;
+  /** Runs after each frame the jelly is drawn, to follow its outline. */
+  readonly onDraw?: (jelly: Jelly) => void;
 }
 
 // The material's palette for the theme, recoloured by the container's
@@ -97,6 +99,9 @@ export function useJelly(
   const onLayout = useEffectEvent((jelly: Jelly, container: HTMLElement) => {
     options.onLayout(jelly, container);
   });
+  const onDraw = useEffectEvent((jelly: Jelly) => {
+    options.onDraw?.(jelly);
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -106,6 +111,9 @@ export function useJelly(
       return noop;
     }
     jellyRef.current = jelly;
+    jelly.surface.onDraw = (): void => {
+      onDraw(jelly);
+    };
     const unmount = mount(jelly, container, onLayout);
     return (): void => {
       unmount();

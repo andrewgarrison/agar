@@ -10,6 +10,15 @@ export interface DrawTarget {
   dpr: number;
   /** Surface-space CSS px of the canvas's top-left corner. */
   origin: { x: number; y: number };
+  /** The cursor, for lens lighting. Without it, the rim light stays where it is at rest. */
+  light?: CursorLight;
+}
+
+/** The cursor in surface-space CSS px, and how far the rim light has turned to it (0 to 1). */
+export interface CursorLight {
+  x: number;
+  y: number;
+  mix: number;
 }
 
 export interface DrawItem {

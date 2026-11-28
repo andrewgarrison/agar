@@ -4,11 +4,12 @@
  */
 export type { BodyOptions } from './body';
 export type { Point, Rect } from './geometry';
-export type { DrawItem, DrawTarget } from './draw-target';
+export type { CursorLight, DrawItem, DrawTarget } from './draw-target';
 export type { JellyParams } from './params';
 export type { JellyMaterial, JellyPalette, Rgba, Theme } from './palettes';
 
 export { JellyBody } from './body';
+export { outlinePath } from './outline';
 export { prefersReducedMotion } from './motion';
 export { JELLY_PALETTES } from './palettes';
 export { DEFAULT_PARAMS, RING, ROUND, STEP } from './params';

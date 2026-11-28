@@ -2,7 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
 import type { Measure } from './jelly';
-import { patchContexts, settledJelly } from './jelly';
+import { colourGap, middleColour, patchContexts, settledJelly } from './jelly';
 
 // Measures down the panel. The glass fades in, so count fainter pixels too.
 const DOWN: Measure = { axis: 'y', solid: 24 };
@@ -22,24 +22,6 @@ function mint(page: Page): Locator {
 async function open(page: Page): Promise<void> {
   await page.goto('/popover');
   await expect(page.locator('.agar-popover').first()).toHaveAttribute('data-jelly', 'ready');
-}
-
-/** The jelly's colour at the middle of a panel's canvas, as [red, green, blue, alpha] bytes. */
-async function middleColour(content: Locator): Promise<number[]> {
-  const colour = await content.evaluate((element) => {
-    const canvas = element.querySelector('canvas');
-    const context = canvas?.getContext('2d');
-    if (!canvas || !context) {
-      throw new Error('no jelly canvas');
-    }
-    return [...context.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data];
-  });
-  return colour;
-}
-
-/** How far apart two colours are, in the largest channel's bytes. */
-function colourGap(from: readonly number[], to: readonly number[]): number {
-  return Math.max(...to.map((channel, index) => Math.abs(channel - (from[index] ?? 0))));
 }
 
 test.describe('popover colours', () => {
