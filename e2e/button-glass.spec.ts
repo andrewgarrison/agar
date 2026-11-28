@@ -31,6 +31,15 @@ async function glassBehind(page: Page, name: string): Promise<Pixel[]> {
   return middle(image, 0, 1);
 }
 
+/** The glass's backdrop filter, prefixed or not. */
+async function backdropFilter(root: Locator): Promise<string> {
+  const filter = await root.locator('.agar-button-glass').evaluate((element) => {
+    const style = getComputedStyle(element);
+    return style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter');
+  });
+  return filter;
+}
+
 async function clipOf(root: Locator): Promise<string> {
   const clip = await root.locator('.agar-button-glass').evaluate((element) => getComputedStyle(element).clipPath);
   return clip;
@@ -131,7 +140,17 @@ test.describe('button glass', () => {
     await expect.poll(lean).toBeLessThan(0);
   });
 
-  test('blurs the picture behind it', async ({ page }) => {
+  test('declares a backdrop blur', async ({ page }) => {
+    await open(page);
+    const filter = await backdropFilter(button(page, 'Publish'));
+    expect(filter).toMatch(/blur\(/u);
+  });
+
+  test('blurs the picture behind it', async ({ page }, info) => {
+    // Playwright's headless Firefox and WebKit draw no backdrop filters at
+    // all, even on a bare div (real Safari and Firefox do), so only Chromium
+    // can show the blur. The test above checks the others declare it.
+    test.skip(info.project.name !== 'chromium', 'Headless Firefox and WebKit draw no backdrop filters.');
     await open(page);
     await hideLabels(page);
     await page.addStyleTag({ content: STRIPES });
