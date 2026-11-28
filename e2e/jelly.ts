@@ -24,40 +24,60 @@ export interface Measure {
    * number of frames later.
    */
   readonly press?: ElementHandle | null;
+  /**
+   * What to read: the jelly's `centre` (the default), or its `extent`, how far
+   * it reaches along the axis in CSS px, which a squish changes.
+   */
+  readonly of?: 'centre' | 'extent';
 }
 
 /**
  * Where the jelly is drawn on a component's canvas, once per frame for
  * `frames` frames: its centre in CSS px from the component's left edge (or
- * top edge, for `y`), or null while nothing is drawn. Only solid pixels
- * count, so the shadow doesn't pull the centre sideways.
+ * top edge, for `y`), or its extent, or null while nothing is drawn. Only
+ * solid pixels count, so the shadow doesn't pull the centre sideways.
  */
 export async function trackJelly(
   root: Locator,
   frames: number,
-  { axis = 'x', solid = 128, press = null }: Measure = {},
+  { axis = 'x', solid = 128, press = null, of = 'centre' }: Measure = {},
 ): Promise<(number | null)[]> {
   const samples = await root.evaluate(
-    async (element, { count, down, cutoff, button }) => {
+    async (element, { count, down, cutoff, button, extent }) => {
       const canvas = element.querySelector('canvas');
       const context = canvas?.getContext('2d');
       if (!canvas || !context) {
         throw new Error('no jelly canvas');
       }
       const centre = (): number | null => {
-        const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
-        let sum = 0;
-        let weight = 0;
-        for (let index = 3; index < data.length; index += 4) {
-          const alpha = data[index] ?? 0;
-          const pixel = (index - 3) / 4;
-          const at = down ? Math.floor(pixel / canvas.width) : pixel % canvas.width;
-          sum += alpha > cutoff ? at * alpha : 0;
-          weight += alpha > cutoff ? alpha : 0;
+        // The solid pixels' weighted position and their first and last row (or
+        // column), in canvas px.
+        const scan = (): { sum: number; weight: number; first: number; last: number } => {
+          const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+          const found = { sum: 0, weight: 0, first: Number.POSITIVE_INFINITY, last: Number.NEGATIVE_INFINITY };
+          for (let index = 3; index < data.length; index += 4) {
+            const alpha = data[index] ?? 0;
+            const pixel = (index - 3) / 4;
+            const at = down ? Math.floor(pixel / canvas.width) : pixel % canvas.width;
+            if (alpha > cutoff) {
+              Object.assign(found, {
+                sum: found.sum + at * alpha,
+                weight: found.weight + alpha,
+                first: Math.min(found.first, at),
+                last: Math.max(found.last, at),
+              });
+            }
+          }
+          return found;
+        };
+        const { sum, weight, first, last } = scan();
+        const scale = canvas.width / canvas.clientWidth;
+        if (weight === 0) {
+          return null;
         }
-        return weight === 0
-          ? null
-          : sum / weight / (canvas.width / canvas.clientWidth) + (down ? canvas.offsetTop : canvas.offsetLeft);
+        return extent
+          ? (last - first + 1) / scale
+          : sum / weight / scale + (down ? canvas.offsetTop : canvas.offsetLeft);
       };
       const sample = async (left: number): Promise<(number | null)[]> => {
         if (left === 0) {
@@ -76,7 +96,7 @@ export async function trackJelly(
       const path = await sample(count);
       return path;
     },
-    { count: frames, down: axis === 'y', cutoff: solid, button: press },
+    { count: frames, down: axis === 'y', cutoff: solid, button: press, extent: of === 'extent' },
   );
   return samples;
 }
@@ -87,7 +107,41 @@ function spread(samples: readonly (number | null)[]): number {
   return xs.length < samples.length ? Number.POSITIVE_INFINITY : Math.max(...xs) - Math.min(...xs);
 }
 
-/** Waits for the jelly to stop moving, and returns where its centre came to rest. */
+/**
+ * Waits until nothing on the component's canvas changes over 10 frames: the
+ * jelly has stopped and so has its light (a lens's rim light eases toward the
+ * cursor over about a second, which `settledJelly` can't see between rows).
+ */
+export async function stillCanvas(root: Locator): Promise<void> {
+  const still = async (): Promise<boolean> => {
+    const same = await root.evaluate(async (element) => {
+      const canvas = element.querySelector('canvas');
+      const context = canvas?.getContext('2d');
+      if (!canvas || !context) {
+        throw new Error('no jelly canvas');
+      }
+      const pixels = (): string => context.getImageData(0, 0, canvas.width, canvas.height).data.join(',');
+      // The pixels `left` frames from now.
+      const after = async (left: number): Promise<string> => {
+        if (left === 0) {
+          return pixels();
+        }
+        const { promise, resolve } = Promise.withResolvers<number>();
+        requestAnimationFrame(resolve);
+        await promise;
+        const later = await after(left - 1);
+        return later;
+      };
+      const before = pixels();
+      const later = await after(10);
+      return later === before;
+    });
+    return same;
+  };
+  await expect.poll(still).toBe(true);
+}
+
+/** Waits for the jelly to stop moving, and returns where its centre (or extent) came to rest. */
 export async function settledJelly(root: Locator, measure: Measure = {}): Promise<number> {
   const resting: number[] = [];
   await expect
@@ -169,4 +223,22 @@ export async function webGLContexts(page: Page): Promise<number> {
 export async function supportsWebGL2(page: Page): Promise<boolean> {
   const supported = await page.evaluate(() => document.createElement('canvas').getContext('webgl2') !== null);
   return supported;
+}
+
+/** The jelly's colour at the middle of a component's canvas, as [red, green, blue, alpha] bytes. */
+export async function middleColour(content: Locator): Promise<number[]> {
+  const colour = await content.evaluate((element) => {
+    const canvas = element.querySelector('canvas');
+    const context = canvas?.getContext('2d');
+    if (!canvas || !context) {
+      throw new Error('no jelly canvas');
+    }
+    return [...context.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data];
+  });
+  return colour;
+}
+
+/** How far apart two colours are, in the largest channel's bytes. */
+export function colourGap(from: readonly number[], to: readonly number[]): number {
+  return Math.max(...to.map((channel, index) => Math.abs(channel - (from[index] ?? 0))));
 }

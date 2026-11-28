@@ -28,6 +28,7 @@
   ],
   "exports": {
     ".": "./dist/index.js",
+    "./button": "./dist/button/index.js",
     "./popover": "./dist/popover/index.js",
     "./switch": "./dist/switch/index.js",
     "./tabs": "./dist/tabs/index.js",

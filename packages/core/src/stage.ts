@@ -6,7 +6,8 @@
 // everything is asleep, off screen, or the tab is hidden.
 
 import type { JellyBody } from './body';
-import type { DrawItem } from './draw-target';
+import { cursor, followCursor } from './cursor';
+import type { CursorLight, DrawItem, DrawTarget } from './draw-target';
 import { Loop } from './loop';
 import type { JellyPalette } from './palettes';
 import { STEP } from './params';
@@ -14,6 +15,10 @@ import { drawSurface, rendererWarmUps } from './renderer';
 
 const MAX_DPR = 2;
 const DEFAULT_MARGIN = 12;
+// The cursor light turns in and out at this rate (per second, eased), and
+// counts as there once this close.
+const LIGHT_RATE = 6;
+const LIGHT_SNAP = 0.002;
 
 // Made on first use, so importing the stage has no side effects and works during SSR.
 const stage: { loop: Loop | null } = { loop: null };
@@ -34,11 +39,16 @@ export class JellySurface {
   public awake = true;
   /** False while the canvas is scrolled out of view. */
   public onScreen = true;
+  /** Runs after each draw, with the bodies where they were drawn: follow their outlines here. */
+  public onDraw: (() => void) | null = null;
   private readonly ctx: CanvasRenderingContext2D;
   private readonly margin: number;
   private readonly observer: IntersectionObserver | null = null;
   private items: DrawItem[] = [];
   private dpr = 1;
+  // How far the rim light has turned to the cursor, for lens bodies.
+  private lightMix = 0;
+  private unfollow: (() => void) | null = null;
 
   /**
    * @param canvas absolutely positioned inside the container it measures from
@@ -86,6 +96,7 @@ export class JellySurface {
 
   public add(body: JellyBody, palette: Readonly<JellyPalette>): void {
     this.items.push({ body, palette });
+    this.follow();
     this.wake();
   }
 
@@ -99,6 +110,7 @@ export class JellySurface {
     if (item !== undefined) {
       item.palette = palette;
     }
+    this.follow();
     this.wake();
   }
 
@@ -115,22 +127,58 @@ export class JellySurface {
         body.step(STEP);
       }
     }
-    drawSurface(
-      {
-        ctx: this.ctx,
-        width: this.canvas.width,
-        height: this.canvas.height,
-        dpr: this.dpr,
-        origin: { x: -this.margin, y: -this.margin },
-      },
-      this.items,
-    );
-    this.awake = this.items.some(({ body }) => !body.isAsleep());
+    const target: DrawTarget = {
+      ctx: this.ctx,
+      width: this.canvas.width,
+      height: this.canvas.height,
+      dpr: this.dpr,
+      origin: { x: -this.margin, y: -this.margin },
+    };
+    const turning = this.unfollow !== null && this.turnLight(steps * STEP);
+    if (this.unfollow !== null) {
+      target.light = this.cursorLight();
+    }
+    drawSurface(target, this.items);
+    this.onDraw?.();
+    this.awake = turning || this.items.some(({ body }) => !body.isAsleep());
   }
 
   public destroy(): void {
     stage.loop?.surfaces.delete(this);
     this.observer?.disconnect();
+    this.unfollow?.();
+    this.unfollow = null;
     this.items = [];
+  }
+
+  // Lens bodies light their rim toward the cursor: follow it while there are any.
+  private follow(): void {
+    const lens = this.items.some(({ palette }) => palette.lens);
+    if (lens && this.unfollow === null) {
+      this.unfollow = followCursor(() => {
+        this.wake();
+      });
+    } else if (!lens && this.unfollow !== null) {
+      this.unfollow();
+      this.unfollow = null;
+    }
+  }
+
+  // Eases the light toward the cursor while it's on the page, and away once it
+  // leaves. True while it's still turning.
+  private turnLight(seconds: number): boolean {
+    const goal = cursor().active ? 1 : 0;
+    this.lightMix += (goal - this.lightMix) * Math.min(1, seconds * LIGHT_RATE);
+    if (Math.abs(this.lightMix - goal) < LIGHT_SNAP) {
+      this.lightMix = goal;
+    }
+    return this.lightMix !== goal;
+  }
+
+  // The cursor in surface space: the canvas's top-left is at -margin.
+  private cursorLight(): CursorLight {
+    const { x, y } = cursor();
+    const box = this.canvas.getBoundingClientRect();
+    return { x: x - box.left - this.margin, y: y - box.top - this.margin, mix: this.lightMix };
   }
 }

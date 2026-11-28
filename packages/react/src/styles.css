@@ -14,6 +14,17 @@
    */
   :root {
     color-scheme: light dark;
+
+    /*
+     * System colours. Every component reads these, so set them on :root (or
+     * any ancestor) to re-theme Agar. Use light-dark() for both themes.
+     * - accent: a switch that's on.
+     *   Keep 4.5:1 against --agar-accent-text.
+     * - focus: focus rings. Keep 3:1 against the page.
+     */
+    --agar-accent: light-dark(#7e22ce, #9333ea);
+    --agar-accent-text: #fff;
+    --agar-focus: light-dark(#7e22ce, #d8b4fe);
   }
 
   :root[data-theme='light'] {
@@ -44,6 +55,127 @@
     pointer-events: none;
   }
 
+  /* === Button === */
+  /*
+   * Jelly glass: a frosted layer blurs what's behind the button, clipped to
+   * the jelly's outline as it wobbles, and the jelly draws depth and light
+   * over it.
+   */
+  .agar-button {
+    --agar-button-height: 40px;
+    --agar-button-padding: 18px;
+    --agar-button-focus: var(--agar-focus);
+    --agar-button-blur: 2px;
+    /* Clear glass, after bilalgursen/liquid-glass: no colour of its own. The
+       jelly shades and lights what's behind it; until it draws, and without
+       a canvas, a white (dark: black) frost stands in. */
+    --agar-button-frost: light-dark(rgb(255 255 255 / 0.6), rgb(0 0 0 / 0.5));
+    --agar-button-edge: light-dark(rgb(0 0 0 / 0.1), rgb(255 255 255 / 0.15));
+    --agar-button-text: light-dark(#171717, #fff);
+
+    position: relative;
+    isolation: isolate;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: var(--agar-button-height);
+    margin: 0;
+    padding: 0 var(--agar-button-padding);
+    border: 0;
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--agar-button-text);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* The frosted layer. Until the jelly draws, and whenever it can't, it's
+     a pill with an edge of its own; then it takes the jelly's outline. */
+  .agar-button-glass {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--agar-button-frost);
+    box-shadow: inset 0 0 0 1px var(--agar-button-edge);
+    -webkit-backdrop-filter: blur(var(--agar-button-blur));
+    backdrop-filter: blur(var(--agar-button-blur));
+    pointer-events: none;
+  }
+
+  /* The jelly draws the edge and the shading itself. */
+  .agar-button[data-jelly='ready'] .agar-button-glass {
+    --agar-button-frost: transparent;
+
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .agar-button .agar-button-glass,
+    .agar-button[data-jelly='ready'] .agar-button-glass {
+      --agar-button-frost: light-dark(#f5f5f5, #1c1c1e);
+    }
+  }
+
+  .agar-button:not([data-jelly='ready']):active:not([data-disabled], [data-pending]) {
+    translate: 0 1px;
+  }
+
+  .agar-button:focus-visible {
+    outline: 2px solid var(--agar-button-focus);
+    outline-offset: 3px;
+  }
+
+  /* Fade the parts, not the button: opacity on the button would stop the
+     frosted layer seeing the page behind it. */
+  .agar-button[data-disabled] {
+    cursor: not-allowed;
+  }
+
+  .agar-button[data-disabled] > * {
+    opacity: 0.5;
+  }
+
+  .agar-button[data-pending] {
+    cursor: progress;
+  }
+
+  /* Above the jelly, which sits behind the content. */
+  .agar-button-label {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+  }
+
+  /* Content shown only while idle, or only while pending. */
+  .agar-button:not([data-pending]) [data-show='pending'],
+  .agar-button[data-pending] [data-show='idle'] {
+    display: none;
+  }
+
+  @media (forced-colors: active) {
+    /* The glass and jelly are drawn in fixed colours, so show a system-coloured button. */
+    .agar-button {
+      border: 1px solid ButtonText;
+      background: ButtonFace;
+      color: ButtonText;
+    }
+
+    .agar-button .agar-jelly-canvas,
+    .agar-button .agar-button-glass {
+      display: none;
+    }
+  }
+
   /* === Switch === */
   .agar-switch {
     --agar-switch-width: 52px;
@@ -55,9 +187,9 @@
        reads bright and glossy over it, as in the spike. The edge keeps 3:1
        against the page, and the on fill keeps 3:1 against the thumb. */
     --agar-switch-track: light-dark(rgb(100 115 135 / 0.2), rgb(255 255 255 / 0.1));
-    --agar-switch-track-checked: light-dark(#0284c7, #2563eb);
+    --agar-switch-track-checked: var(--agar-accent);
     --agar-switch-edge: light-dark(#7b8594, #737d8c);
-    --agar-switch-focus: light-dark(#0369a1, #8db4ff);
+    --agar-switch-focus: var(--agar-focus);
 
     position: relative;
     display: inline-block;
@@ -158,7 +290,7 @@
     --agar-tabs-text-hover: light-dark(#1f2937, #d9dee6);
     --agar-tabs-text-selected: light-dark(#0b1b2b, #fff);
     --agar-tabs-indicator: light-dark(rgb(3 30 55 / 0.14), rgb(255 255 255 / 0.16));
-    --agar-tabs-focus: light-dark(#0369a1, #8db4ff);
+    --agar-tabs-focus: var(--agar-focus);
 
     display: flex;
     flex-direction: column;
@@ -288,7 +420,7 @@
   /* === Popover === */
   .agar-popover-trigger,
   .agar-popover {
-    --agar-popover-focus: light-dark(#0369a1, #8db4ff);
+    --agar-popover-focus: var(--agar-focus);
   }
 
   .agar-popover-trigger {

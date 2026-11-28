@@ -1,7 +1,7 @@
 // The WebGL2 renderer. One instance is shared by every surface on the page.
 
 import type { JellyBody } from './body';
-import type { DrawItem, DrawTarget } from './draw-target';
+import type { CursorLight, DrawItem, DrawTarget } from './draw-target';
 import { growCanvas, isVisible, rgbaToArray } from './draw-target';
 import type { Rect } from './geometry';
 import { RING, ROUND } from './params';
@@ -14,6 +14,19 @@ const TRIANGLE = 3;
 const SHADOW_FADE = 5;
 const SHADOW_DROP = 2.5;
 const REACH = ROUND + SHADOW_FADE + SHADOW_DROP;
+// Lens lighting's shadow reaches further below: its far part's offset and
+// softness, as fractions of the body's height (shader.ts's 120-unit design
+// height: 17.6 and 30.6 units).
+const LENS_SHADOW_DROP = 0.147;
+const LENS_SHADOW_FADE = 0.255;
+const LENS_SHADOW = LENS_SHADOW_DROP + LENS_SHADOW_FADE;
+// The cursor light turns in half-degree steps (finer changes less than one
+// level of rim light on an 8-bit screen), and comes from above at rest or
+// with the cursor on the body's centre.
+const HALF_TURN_DEGREES = 180;
+const LIGHT_STEPS = (HALF_TURN_DEGREES * 2) / Math.PI;
+const LIGHT_CENTRE = 0.5;
+const LIGHT_ABOVE = -Math.PI / 2;
 // An inner box no pixel is in.
 const NO_BOX: Rect = { left: 0, right: 0, top: 0, bottom: 0 };
 
@@ -30,6 +43,8 @@ interface Uniforms {
   shadow: WebGLUniformLocation | null;
   opacity: WebGLUniformLocation | null;
   inner: WebGLUniformLocation | null;
+  lens: WebGLUniformLocation | null;
+  light: WebGLUniformLocation | null;
 }
 
 function locate(gl: WebGL2RenderingContext, program: WebGLProgram): Uniforms {
@@ -46,6 +61,8 @@ function locate(gl: WebGL2RenderingContext, program: WebGLProgram): Uniforms {
     shadow: gl.getUniformLocation(program, 'uShadow'),
     opacity: gl.getUniformLocation(program, 'uOpacity'),
     inner: gl.getUniformLocation(program, 'uInner'),
+    lens: gl.getUniformLocation(program, 'uLens'),
+    light: gl.getUniformLocation(program, 'uLight'),
   };
 }
 
@@ -88,17 +105,32 @@ function createContext(canvas: HTMLCanvasElement): WebGL2RenderingContext {
   return gl;
 }
 
-// Limits drawing to the ring's box, plus REACH, in device px with GL's origin
-// at the bottom left. The fragment shader walks the whole ring for every
+// Limits drawing to the ring's box grown by `reach` px, in device px with
+// GL's origin at the bottom left. The fragment shader walks the whole ring for every
 // pixel, so skipping the empty canvas margin halves the cost of a big panel:
 // it matters wherever WebGL runs in software.
-function scissorTo(gl: WebGL2RenderingContext, target: DrawTarget, bounds: Rect): void {
+function scissorTo(gl: WebGL2RenderingContext, target: DrawTarget, { bounds, reach }: Reach): void {
   const { origin, dpr, height } = target;
-  const x0 = Math.max(0, Math.floor((bounds.left - REACH - origin.x) * dpr));
-  const x1 = Math.ceil((bounds.right + REACH - origin.x) * dpr);
-  const y0 = Math.max(0, Math.floor(height - (bounds.bottom + REACH - origin.y) * dpr));
-  const y1 = Math.ceil(height - (bounds.top - REACH - origin.y) * dpr);
+  const x0 = Math.max(0, Math.floor((bounds.left - reach - origin.x) * dpr));
+  const x1 = Math.ceil((bounds.right + reach - origin.x) * dpr);
+  const y0 = Math.max(0, Math.floor(height - (bounds.bottom + reach - origin.y) * dpr));
+  const y1 = Math.ceil(height - (bounds.top - reach - origin.y) * dpr);
   gl.scissor(x0, y0, Math.max(0, x1 - x0), Math.max(0, y1 - y0));
+}
+
+interface Reach {
+  bounds: Rect;
+  reach: number;
+}
+
+// The way the cursor light comes from, as an angle, seen from the body's centre.
+function lightAngle(light: CursorLight, bounds: Rect): number {
+  const dx = light.x - (bounds.left + bounds.right) / 2;
+  const dy = light.y - (bounds.top + bounds.bottom) / 2;
+  if (light.mix <= 0 || Math.hypot(dx, dy) < LIGHT_CENTRE) {
+    return LIGHT_ABOVE;
+  }
+  return Math.round(Math.atan2(dy, dx) * LIGHT_STEPS) / LIGHT_STEPS;
 }
 
 // Draw in the bottom-left width × height (GL's origin): the top-left once the
@@ -168,20 +200,33 @@ export class GLRenderer {
 
   // Uploads the body's ring, and limits drawing to round it: the scissor
   // skips the empty margin, the inner box skips the ring walk inside it.
-  private setRing(target: DrawTarget, body: JellyBody): void {
+  // Lens lighting shades deep inside the rim, so it walks every pixel.
+  private setRing(target: DrawTarget, body: JellyBody, lens: boolean): Rect {
     const { gl, uniforms } = this;
     const [top, bottom] = body.yRange;
     gl.uniform2fv(uniforms.points, body.pts);
     gl.uniform2f(uniforms.yRange, top, bottom);
     const bounds = ringBounds(body.pts);
-    scissorTo(gl, target, bounds);
-    const inner = innerBox(body.pts, bounds) ?? NO_BOX;
+    scissorTo(gl, target, { bounds, reach: lens ? ROUND + (bottom - top) * LENS_SHADOW : REACH });
+    const inner = (lens ? null : innerBox(body.pts, bounds)) ?? NO_BOX;
     gl.uniform4f(uniforms.inner, inner.left, inner.top, inner.right, inner.bottom);
+    return bounds;
+  }
+
+  // Lens lighting, or not. A lens's rim leans toward the cursor, as far as it has turned.
+  private setLens(target: DrawTarget, bounds: Rect, lens: boolean): void {
+    const { gl, uniforms } = this;
+    gl.uniform1f(uniforms.lens, lens ? 1 : 0);
+    if (lens) {
+      const { light } = target;
+      const angle = light === undefined ? LIGHT_ABOVE : lightAngle(light, bounds);
+      gl.uniform3f(uniforms.light, Math.cos(angle), Math.sin(angle), light?.mix ?? 0);
+    }
   }
 
   private drawBody(target: DrawTarget, { body, palette }: DrawItem): void {
     const { gl, uniforms } = this;
-    this.setRing(target, body);
+    this.setLens(target, this.setRing(target, body, palette.lens), palette.lens);
     gl.uniform4fv(uniforms.tintTop, rgbaToArray(palette.tintTop));
     gl.uniform4fv(uniforms.tintBottom, rgbaToArray(palette.tintBottom));
     gl.uniform4f(uniforms.effects, palette.specular, palette.rim, palette.glow, palette.stroke);

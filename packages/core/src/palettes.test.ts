@@ -32,6 +32,7 @@ describe('jelly palettes', () => {
       'dark,light',
       'dark,light',
       'dark,light',
+      'dark,light',
     ]);
   });
 
